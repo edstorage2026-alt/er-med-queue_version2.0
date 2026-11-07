@@ -1,0 +1,1670 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Que Admission MED</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600;700;800&family=Sarabun:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="logo_ER.ico">
+    <!-- Camera Barcode Scanner -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+
+    <!-- Flatpickr Datepicker -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/th.js"></script>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- รองรับ iOS Home Screen -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="ER Queue">
+    <link rel="apple-touch-icon" href="logo_ER.jpg">
+
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+            font-size: 16px;
+        }
+
+        .heading {
+            font-family: 'Prompt', sans-serif;
+        }
+
+        /* กากบาทเคสปกติ (สีน้ำเงินเข้ม) */
+        .crossed-box {
+            position: relative;
+            background-color: #eff6ff;
+        }
+
+        .crossed-box::before,
+        .crossed-box::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 10%;
+            width: 80%;
+            height: 3px;
+            background-color: rgba(30, 58, 138, 0.85);
+            pointer-events: none;
+        }
+
+        .crossed-box::before {
+            transform: rotate(38deg);
+        }
+
+        .crossed-box::after {
+            transform: rotate(-38deg);
+        }
+
+        /* กากบาทเคส Ventilator (สีแดงสด) */
+        .crossed-box-vent {
+            position: relative;
+            background-color: #fff1f2;
+        }
+
+        .crossed-box-vent::before,
+        .crossed-box-vent::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 10%;
+            width: 80%;
+            height: 3.5px;
+            background-color: rgba(225, 29, 72, 0.95);
+            pointer-events: none;
+        }
+
+        .crossed-box-vent::before {
+            transform: rotate(38deg);
+        }
+
+        .crossed-box-vent::after {
+            transform: rotate(-38deg);
+        }
+
+        /* ช่องที่ถูกล็อก: เปลี่ยนพื้นหลังเป็นเทาอ่อน */
+        .crossed-box-locked {
+            position: relative;
+            background-color: #f1f5f9 !important;
+            /* Slate 100 */
+            border-color: #cbd5e1 !important;
+            /* Slate 300 */
+            opacity: 0.85;
+        }
+
+        /* เส้นกากบาทของช่องที่ถูกล็อก (สีเทาเข้ม) */
+        .crossed-box-locked::before,
+        .crossed-box-locked::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 10%;
+            width: 80%;
+            height: 3px;
+            background-color: rgba(100, 116, 139, 0.7) !important;
+            /* Slate 500 */
+            pointer-events: none;
+        }
+
+        .crossed-box-locked::before {
+            transform: rotate(38deg);
+        }
+
+        .crossed-box-locked::after {
+            transform: rotate(-38deg);
+        }
+
+        /* ช่องว่างของวอร์ดที่โควตา Vent เต็มแล้ว */
+        .slot-ward-full {
+            background-color: #e2e8f0 !important;
+            /* สีเทา Slate 200 */
+            border-color: #cbd5e1 !important;
+            /* สีเส้นขอบเทา */
+            color: #94a3b8 !important;
+            /* สีตัวเลขจางลง */
+            cursor: not-allowed !important;
+            /* เคอร์เซอร์เปลี่ยนเป็นเครื่องหมายห้าม */
+            opacity: 0.75;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-200 text-slate-800 p-3 sm:p-6 min-h-screen">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+
+        <!-- TOPBAR -->
+        <header
+            class="bg-white rounded-3xl p-5 shadow-sm border border-slate-300 flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-12 h-12 rounded-xl bg-white border border-slate-200 p-1 flex items-center justify-center shadow-sm flex-shrink-0 overflow-hidden">
+                        <!-- เปลี่ยนชื่อไฟล์ logo_ER.ico เป็นชื่อไฟล์รูปภาพโลโก้ของคุณ เช่น logo.png หรือ logo_ER.ico -->
+                        <img src="logo_ER.jpg" alt="ER Logo" class="w-full h-full object-contain">
+                    </div>
+                    <h1 class="text-xl sm:text-2xl font-black heading text-slate-900 flex items-center gap-2">
+                        Que Admission MED
+                    </h1>
+                    <span id="dbStatusBadge"
+                        class="text-xs bg-emerald-100 text-emerald-800 border border-emerald-300 px-3 py-1 rounded-full font-bold flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle text-[8px] animate-pulse"></i> เชื่อมต่อ Google Sheets สำเร็จ
+                    </span>
+                </div>
+                <p class="text-sm text-slate-500 mt-1">กระดานจองคิวแอดมิทอายุรกรรม
+                    กลุ่มงานการพยาบาลผู้ป่วยอุบัติเหตุเเละฉุกเฉิน</p>
+                <p class="text-sm text-slate-500 mt-1"> ภารกิจด้านการพยาบาล โรงพยาบาลพุทธชินราช พิษณุโลก</p>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button type="button" onclick="openQuotaModal()"
+                    class="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs sm:text-sm font-bold rounded-2xl border border-rose-300 transition flex items-center gap-2 shadow-sm">
+                    <i class="fa-solid fa-sliders text-rose-600"></i>
+                    <span>ตั้งลิมิต Vent ประจำเวร</span>
+                </button>
+                <div
+                    class="flex items-center gap-2.5 bg-slate-50 border border-slate-300 px-3.5 py-1.5 rounded-2xl text-xs sm:text-sm shadow-sm">
+                    <i class="fa-solid fa-user-nurse text-blue-600 text-lg"></i>
+                    <div>
+                        <span class="text-[10px] text-slate-400 block font-bold leading-tight">ผู้บันทึก:</span>
+                        <!-- กล่องพิมพ์ค้นหาพร้อม Autocomplete -->
+                        <input list="staffOptions" id="staffSelector" placeholder="พิมพ์ค้นหาชื่อ..."
+                            class="bg-transparent font-black text-slate-800 text-xs sm:text-sm outline-none w-36 sm:w-44 placeholder-slate-400"
+                            onchange="onStaffChange(this.value)">
+                        <!-- แหล่งเก็บตัวเลือก Autocomplete -->
+                        <datalist id="staffOptions"></datalist>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- SECTION 1: QUE MED MALE -->
+        <section class="bg-white rounded-3xl p-5 shadow-sm border border-slate-300 space-y-4">
+            <div class="border-b-2 border-slate-800 pb-2 flex items-center justify-between">
+                <h2 class="text-lg sm:text-xl font-black heading text-slate-900 flex items-center gap-2.5">
+                    <span class="w-3.5 h-3.5 rounded-full bg-blue-600"></span>
+                    Que Med Male (อายุรกรรมชาย)
+                </h2>
+                <span class="text-xs font-bold text-slate-400">คิวผู้ป่วยชาย</span>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                <!-- 1.1 Male Normal -->
+                <div
+                    class="lg:col-span-8 border border-slate-300 rounded-2xl p-4 bg-slate-50/50 flex flex-col justify-between">
+                    <div class="flex flex-wrap items-center justify-between border-b border-slate-200 pb-2 mb-3 gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-sm text-slate-800">Que / Que Pass</span>
+                            <span id="stat-male-normal"
+                                class="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-lg">0
+                                ราย</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 bg-white border border-slate-300 rounded-xl px-2 py-1">
+                            <span class="text-[11px] font-bold text-slate-500">รอบที่:</span>
+                            <select id="cycle-male-normal" onchange="changeSectionCycle('male-normal', this.value)"
+                                class="bg-slate-50 border border-slate-300 rounded-lg text-xs font-black text-blue-700 px-2 py-0.5 outline-none"></select>
+                        </div>
+                    </div>
+                    <div id="grid-male-normal" class="grid grid-cols-5 sm:grid-cols-10 gap-1.5"></div>
+                </div>
+
+                <!-- 1.2 Male Vent -->
+                <div
+                    class="lg:col-span-4 border border-rose-300 rounded-2xl p-4 bg-rose-50/30 flex flex-col justify-between">
+                    <div class="flex flex-wrap items-center justify-between border-b border-rose-200 pb-2 mb-3 gap-2">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <span class="font-bold text-sm text-rose-800"><i
+                                    class="fa-solid fa-lungs text-rose-600"></i> Ventilator</span>
+                            <span id="stat-male-vent"
+                                class="text-xs font-bold text-rose-700 bg-rose-100 border border-rose-200 px-2 py-0.5 rounded-lg">0
+                                ราย</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 bg-white border border-rose-200 rounded-xl px-2 py-1">
+                            <span class="text-[11px] font-bold text-slate-500">รอบที่:</span>
+                            <select id="cycle-male-vent" onchange="changeSectionCycle('male-vent', this.value)"
+                                class="bg-slate-50 border border-slate-300 rounded-lg text-xs font-black text-rose-700 px-2 py-0.5 outline-none"></select>
+                        </div>
+                    </div>
+                    <div id="quotaBarMale" class="grid grid-cols-3 gap-1 mb-2.5"></div>
+                    <div id="grid-male-vent" class="grid grid-cols-3 sm:grid-cols-6 gap-1.5"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: QUE MED FEMALE -->
+        <section class="bg-white rounded-3xl p-5 shadow-sm border border-slate-300 space-y-4">
+            <div class="border-b-2 border-slate-800 pb-2 flex items-center justify-between">
+                <h2 class="text-lg sm:text-xl font-black heading text-slate-900 flex items-center gap-2.5">
+                    <span class="w-3.5 h-3.5 rounded-full bg-pink-500"></span>
+                    Que Med Female (อายุรกรรมหญิง)
+                </h2>
+                <span class="text-xs font-bold text-slate-400">คิวผู้ป่วยหญิง</span>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                <!-- 2.1 Female Normal -->
+                <div
+                    class="lg:col-span-8 border border-slate-300 rounded-2xl p-4 bg-slate-50/50 flex flex-col justify-between">
+                    <div class="flex flex-wrap items-center justify-between border-b border-slate-200 pb-2 mb-3 gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-sm text-slate-800">Que / Que Pass</span>
+                            <span id="stat-female-normal"
+                                class="text-xs font-bold text-pink-700 bg-pink-50 border border-pink-200 px-2 py-0.5 rounded-lg">0
+                                ราย</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 bg-white border border-slate-300 rounded-xl px-2 py-1">
+                            <span class="text-[11px] font-bold text-slate-500">รอบที่:</span>
+                            <select id="cycle-female-normal" onchange="changeSectionCycle('female-normal', this.value)"
+                                class="bg-slate-50 border border-slate-300 rounded-lg text-xs font-black text-pink-700 px-2 py-0.5 outline-none"></select>
+                        </div>
+                    </div>
+                    <div id="grid-female-normal" class="grid grid-cols-5 sm:grid-cols-10 gap-1.5"></div>
+                </div>
+
+                <!-- 2.2 Female Vent -->
+                <div
+                    class="lg:col-span-4 border border-rose-300 rounded-2xl p-4 bg-rose-50/30 flex flex-col justify-between">
+                    <div class="flex flex-wrap items-center justify-between border-b border-rose-200 pb-2 mb-3 gap-2">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <span class="font-bold text-sm text-rose-800"><i
+                                    class="fa-solid fa-lungs text-rose-600"></i> Ventilator</span>
+                            <span id="stat-female-vent"
+                                class="text-xs font-bold text-rose-700 bg-rose-100 border border-rose-200 px-2 py-0.5 rounded-lg">0
+                                ราย</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 bg-white border border-rose-200 rounded-xl px-2 py-1">
+                            <span class="text-[11px] font-bold text-slate-500">รอบที่:</span>
+                            <select id="cycle-female-vent" onchange="changeSectionCycle('female-vent', this.value)"
+                                class="bg-slate-50 border border-slate-300 rounded-lg text-xs font-black text-rose-700 px-2 py-0.5 outline-none"></select>
+                        </div>
+                    </div>
+                    <div id="quotaBarFemale" class="grid grid-cols-3 gap-1 mb-2.5"></div>
+                    <div id="grid-female-vent" class="grid grid-cols-3 sm:grid-cols-6 gap-1.5"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: ตารางสรุปรายวัน -->
+        <section class="bg-white rounded-3xl p-5 shadow-sm border border-slate-300 space-y-4">
+            <div class="flex flex-wrap items-center justify-between border-b-2 border-slate-800 pb-3 gap-3">
+                <div>
+                    <h2 class="text-lg sm:text-xl font-black heading text-slate-900 flex items-center gap-2">
+                        <i class="fa-solid fa-calendar-check text-blue-600"></i>
+                        สรุปยอดคิวและการลงข้อมูลประจำวัน
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-500 mt-0.5">ตรวจสอบเคสที่บันทึก และประวัติการกาคิวย้อนหลัง
+                    </p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="text-xs font-bold text-slate-600">เลือกวันที่:</label>
+                    <input type="text" id="summaryDateFilter" readonly
+                        class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-black text-blue-700 outline-none cursor-pointer w-36 text-center focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                <div class="bg-blue-50/70 border border-blue-200 rounded-2xl p-3 text-center">
+                    <span class="text-[11px] font-bold text-blue-800 block">รวมทุกคิววันนี้</span>
+                    <span id="daily-total-all" class="text-xl font-black text-blue-900">0 ราย</span>
+                </div>
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 text-center">
+                    <span class="text-[11px] font-bold text-slate-600 block">ชาย - ปกติ</span>
+                    <span id="daily-total-male-normal" class="text-xl font-black text-blue-700">0</span>
+                </div>
+                <div class="bg-rose-50 border border-rose-200 rounded-2xl p-3 text-center">
+                    <span class="text-[11px] font-bold text-rose-800 block">ชาย - Vent</span>
+                    <span id="daily-total-male-vent" class="text-xl font-black text-rose-600">0</span>
+                </div>
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 text-center">
+                    <span class="text-[11px] font-bold text-slate-600 block">หญิง - ปกติ</span>
+                    <span id="daily-total-female-normal" class="text-xl font-black text-pink-600">0</span>
+                </div>
+                <div class="bg-rose-50 border border-rose-200 rounded-2xl p-3 text-center">
+                    <span class="text-[11px] font-bold text-rose-800 block">หญิง - Vent</span>
+                    <span id="daily-total-female-vent" class="text-xl font-black text-rose-600">0</span>
+                </div>
+            </div>
+
+            <div class="border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs sm:text-sm text-slate-700">
+                        <thead class="bg-slate-100 text-slate-900 font-black border-b border-slate-200 text-xs">
+                            <tr>
+                                <th class="py-3 px-4 whitespace-nowrap">เวลาที่กา</th>
+                                <th class="py-3 px-4 whitespace-nowrap">HN ผู้ป่วย</th>
+                                <th class="py-3 px-4 whitespace-nowrap">หมวดหมู่คิว</th>
+                                <th class="py-3 px-4 whitespace-nowrap">วอร์ดตามเลขช่อง</th>
+                                <th class="py-3 px-4 whitespace-nowrap">รอบแผ่น</th>
+                                <th class="py-3 px-4 whitespace-nowrap">ผู้บันทึก</th>
+                                <th class="py-3 px-4 text-center whitespace-nowrap">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dailySummaryTableBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- MODAL ลงบันทึกคิว -->
+    <div id="bookingModal"
+        class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200">
+            <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+                <h3 class="font-black text-base text-slate-900 heading">กาคิว: <span id="modalTargetTitle"
+                        class="text-blue-600"></span></h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+            </div>
+
+            <button type="button" onclick="startCameraScan()"
+                class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 mb-3">
+                <i class="fa-solid fa-camera text-rose-400"></i> เปิดกล้องสแกนบาร์โค้ด HN
+            </button>
+
+            <div id="cameraPreview"
+                class="hidden mb-3 overflow-hidden rounded-2xl border-2 border-blue-400 bg-slate-900 shadow-inner">
+                <div id="reader" class="w-full"></div>
+                <div class="p-2 bg-slate-900 flex justify-between items-center gap-2">
+                    <span class="text-[11px] text-slate-300 font-bold ml-1">
+                        <i class="fa-solid fa-barcode text-blue-400 mr-1"></i> จ่อบาร์โค้ดให้อยู่ในกรอบ
+                    </span>
+                    <button type="button" onclick="stopCameraScan()"
+                        class="px-3 py-1 text-xs bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg transition">
+                        ✕ ปิดกล้อง
+                    </button>
+                </div>
+            </div>
+
+            <form id="bookingForm" onsubmit="handleBookingSubmit(event)" class="space-y-4 text-xs sm:text-sm">
+                <input type="hidden" id="selectedSlotId">
+                <input type="hidden" id="selectedSection">
+                <input type="hidden" id="selectedSectionCycle">
+                <input type="hidden" id="selectedNum">
+                <input type="hidden" id="selectedWard">
+
+                <div>
+                    <label class="font-bold text-slate-700">หมายเลข HN (สแกนหรือพิมพ์)</label>
+                    <input type="text" id="hnInput" required placeholder="ยิงบาร์โค้ด หรือพิมพ์ เช่น 660142"
+                        class="mt-1.5 w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-base font-bold focus:ring-2 focus:ring-blue-500 outline-none">
+                    <p class="text-[11px] text-slate-400 mt-1">* หน้ากระดานจะ Mask เป็น <b>***142</b> ตาม PDPA</p>
+                </div>
+
+                <div>
+                    <label class="font-bold text-slate-700 flex justify-between items-center">
+                        <span>ชื่อผู้จอง / ผู้กากบาท</span>
+                        <span class="text-[10px] text-blue-600 font-normal">*พิมพ์เปลี่ยนชื่อได้</span>
+                    </label>
+                    <input type="text" id="bookedByInput" list="staffOptions" required
+                        placeholder="เลือกหรือพิมพ์ชื่อผู้กา..."
+                        class="mt-1.5 w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-800 font-bold focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="closeModal()"
+                        class="w-1/2 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50">ยกเลิก</button>
+                    <button type="submit"
+                        class="w-1/2 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md">กาช่อง
+                        (บันทึก)</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL ดูรายละเอียด/ลบกากบาท -->
+    <div id="detailModal"
+        class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200">
+            <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-100">
+                <h3 class="font-black text-base text-slate-900 heading">ข้อมูลคิวที่บันทึก</h3>
+                <button onclick="closeDetailModal()" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+            </div>
+
+            <div class="space-y-2 text-sm text-slate-700 py-3" id="detailContent"></div>
+
+            <div class="flex gap-2 pt-3 border-t border-slate-100 mt-2">
+                <button type="button" onclick="closeDetailModal()"
+                    class="w-1/2 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold">ปิด</button>
+                <button type="button" id="btnReleaseBox"
+                    class="w-1/2 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold">ลบกากบาทออก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ตั้งลิมิตรวม อช.1-3 และ อญ.1-3 -->
+    <div id="quotaModal"
+        class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div
+            class="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b pb-3 border-slate-100">
+                <h3 class="text-base font-black text-slate-900 heading flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-blue-600"></i> ตั้งลิมิตและครองเตียง Ventilator (ประจำเวร)
+                </h3>
+                <button onclick="closeQuotaModal()"
+                    class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+            </div>
+
+            <p class="text-xs text-slate-500">กรอก <b>ลิมิตเต็มทั้งหมด</b> และ
+                <b>ยอดครองเตียงที่วอร์ดโทรแจ้งตอนต้นเวร</b> เมื่อกดเริ่มเวรใหม่
+                ระบบจะรีเซ็ตโควตาและล็อกคิวของเวรที่ผ่านมาอัตโนมัติ
+            </p>
+
+            <form onsubmit="return false;" class="space-y-4 text-xs sm:text-sm">
+                <!-- ฝั่งอายุรกรรมชาย (อช.1 - 3) -->
+                <div class="bg-blue-50/60 p-3.5 rounded-2xl border border-blue-200 space-y-2.5">
+                    <div class="font-black text-blue-900 text-sm flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span> อายุรกรรมชาย (อช.1 - 3)
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div class="bg-white p-2.5 rounded-xl border border-blue-100 space-y-1">
+                            <div class="flex justify-between font-bold text-slate-700 text-xs"><span>อช.1</span><span
+                                    id="calcMale1" class="text-blue-600">ว่าง 0</span></div>
+                            <input type="number" id="male_max_1" min="0" placeholder="เต็ม"
+                                class="w-full border rounded-lg px-2 py-1 text-center font-bold text-xs mb-1">
+                            <input type="number" id="male_occ_1" min="0" placeholder="ครอง"
+                                class="w-full border rounded-lg px-2 py-1 text-center font-bold text-xs text-rose-600">
+                        </div>
+                        <div class="bg-white p-2.5 rounded-xl border border-blue-100 space-y-1">
+                            <div class="flex justify-between font-bold text-slate-700 text-xs"><span>อช.2</span><span
+                                    id="calcMale2" class="text-blue-600">ว่าง 0</span></div>
+                            <input type="number" id="male_max_2" min="0" placeholder="เต็ม"
+                                class="w-full border rounded-lg px-2 py-1 text-center font-bold text-xs mb-1">
+                            <input type="number" id="male_occ_2" min="0" placeholder="ครอง"
+                                class="w-full border rounded-lg px-2 py-1 text-center font-bold text-xs text-rose-600">
+                        </div>
+                        <div class="bg-white p-2.5 rounded-xl border border-blue-100 space-y-1">
+                            <div class="flex justify-between font-bold text-slate-700 text-xs"><span>อช.3</span><span
+                                    id="calcMale3" class="text-blue-600">ว่าง 0</span></div>
+                            <input type="number" id="male_max_3" min="0" placeholder="เต็ม"
+                                class="w-full border rounded-lg px-2 py-1 text-center font-bold text-xs mb-1">
+                            <input type="number" id="male_occ_3" min="0" placeholder="ครอง"
+                                class="w-full border rounded-lg px-2 py-1 text-center font-bold text-xs text-rose-600">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ฝั่งอายุรกรรมหญิง (อญ.1 - 3) -->
+                <div class="bg-pink-50/60 p-3.5 rounded-2xl border border-pink-200 space-y-2.5">
+                    <div class="font-black text-pink-900 text-sm flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-pink-500"></span> อายุรกรรมหญิง (อญ.1 - 3)
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div class="bg-white p-2.5 rounded-xl border border-pink-100 space-y-1">
+                            <div class="flex justify-between font-bold text-slate-700 text-xs"><span>อญ.1</span><span
+                                    id="calcFemale1" class="text-pink-600">ว่าง 0</span></div>
+                            <input type="number" id="female_max_1" min="0" placeholder="เต็ม"
+                                class="w-full border rounded-lg px-2 py-1 text-center font-bold text-xs mb-1">
+                            <input type="number" id="female_occ_1" min="0" placeholder="ครอง"
+                                class="w-full border rounded-lg px-2 py-1 text-center font-bold text-xs text-rose-600">
+                        </div>
+                        <div class="bg-white p-2.5 rounded-xl border border-pink-100 space-y-1">
+                            <div class="flex justify-between font-bold text-slate-700 text-xs"><span>อญ.2</span><span
+                                    id="calcFemale2" class="text-pink-600">ว่าง 0</span></div>
+                            <input type="number" id="female_max_2" min="0" placeholder="เต็ม"
+                                class="w-full border rounded-lg px-2 py-1 text-center font-bold text-xs mb-1">
+                            <input type="number" id="female_occ_2" min="0" placeholder="ครอง"
+                                class="w-full border rounded-lg px-2 py-1 text-center font-bold text-xs text-rose-600">
+                        </div>
+                        <div class="bg-white p-2.5 rounded-xl border border-pink-100 space-y-1">
+                            <div class="flex justify-between font-bold text-slate-700 text-xs"><span>อญ.3</span><span
+                                    id="calcFemale3" class="text-pink-600">ว่าง 0</span></div>
+                            <input type="number" id="female_max_3" min="0" placeholder="เต็ม"
+                                class="w-full border rounded-lg px-2 py-1 text-center font-bold text-xs mb-1">
+                            <input type="number" id="female_occ_3" min="0" placeholder="ครอง"
+                                class="w-full border rounded-lg px-2 py-1 text-center font-bold text-xs text-rose-600">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- สรุปยอดรวม -->
+                <div
+                    class="bg-emerald-50 p-3 rounded-2xl border border-emerald-200 text-xs flex items-center justify-between">
+                    <span class="text-emerald-800 font-bold">รวมโควตาว่างทั้งหมดที่ ER กาได้ในเวรนี้:</span>
+                    <b id="calcTotalAvailableAll" class="text-base font-black text-emerald-700">0 เครื่อง</b>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-2 pt-2">
+                    <button type="button" onclick="closeQuotaModal()"
+                        class="w-full sm:w-1/4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 text-xs">ยกเลิก</button>
+                    <button type="button" onclick="saveVentQuotaCombined('update')"
+                        class="w-full sm:w-1/4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-md">
+                        <i class="fa-solid fa-arrows-rotate mr-1"></i> อัปเดตระหว่างเวร
+                    </button>
+                    <button type="button" onclick="confirmSameQuota()"
+                        class="w-full sm:w-1/4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-bolt"></i> ยอดเดิม (เริ่มเวรใหม่)
+                    </button>
+                    <button type="button" onclick="saveVentQuotaCombined('new_shift')"
+                        class="w-full sm:w-1/4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md">
+                        <i class="fa-solid fa-clock-rotate-left mr-1"></i> บันทึกเเละเริ่มเวรใหม่
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxrvV21Lhug6hVzoJ0_6n1XJU3rgRqDIQEIjxJ6hJsglnjqMWEJ1AePU8x3-xYYgWeBTQ/exec';
+
+        let pendingQueues = {};
+        let pendingDeletes = new Set();
+
+        let currentStaffName = localStorage.getItem('er_staff_name') || 'ER';
+
+        const staffSelector = document.getElementById('staffSelector');
+        if (staffSelector) {
+            staffSelector.value = currentStaffName;
+        }
+
+        function onStaffChange(val) {
+            if (!val || val.trim() === '') return;
+            currentStaffName = val.trim();
+            localStorage.setItem('er_staff_name', currentStaffName);
+        }
+
+        function populateStaffDatalist(staffList) {
+            const datalist = document.getElementById('staffOptions');
+            if (!datalist || !Array.isArray(staffList)) return;
+
+            datalist.innerHTML = ''; // ล้างตัวเลือกเก่า
+            staffList.forEach(name => {
+                if (name && String(name).trim() !== '') {
+                    const option = document.createElement('option');
+                    option.value = String(name).trim();
+                    datalist.appendChild(option);
+                }
+            });
+        }
+
+        const normalPattern = [
+            1, 2, 3, 1, 2, 1, 2, 3, 1, 2,
+            1, 2, 3, 1, 2, 1, 2, 3, 1, 2,
+            1, 2, 3, 1, 2, 1, 2, 3, 1, 2,
+            1, 2, 3, 1, 2, 1, 2, 3, 1, 2,
+            1, 2, 3, 1, 2, 1, 2, 3, 1, 2,
+            1, 2, 3, 1, 2, 1, 2, 3, 1, 2,
+            1, 2, 3, 1, 2, 1, 2, 3, 1, 2,
+            1, 2, 3, 1, 2, 1, 2, 3, 1, 2
+        ];
+
+        const ventPattern = [
+            3, 2, 1, 3, 2, 1,
+            3, 2, 1, 3, 2, 1,
+            3, 2, 1, 3, 2, 1,
+            3, 2, 1, 3, 2, 1,
+            3, 2, 1, 3, 2, 1,
+            3, 2, 1, 3, 2, 1,
+            3, 2, 1, 3, 2, 1,
+            3, 2, 1, 3, 2, 1
+        ];
+
+        let sectionCycles = JSON.parse(localStorage.getItem('er_section_cycles')) || {
+            'male-normal': 1,
+            'male-vent': 1,
+            'female-normal': 1,
+            'female-vent': 1
+        };
+
+        let wardDetailedLimits = JSON.parse(localStorage.getItem('er_ward_detailed_limits')) || {
+            'male': {
+                'อช.1': { max: 0, occupied: 0, available: 0, updatedAt: null },
+                'อช.2': { max: 0, occupied: 0, available: 0, updatedAt: null },
+                'อช.3': { max: 0, occupied: 0, available: 0, updatedAt: null }
+            },
+            'female': {
+                'อญ.1': { max: 0, occupied: 0, available: 0, updatedAt: null },
+                'อญ.2': { max: 0, occupied: 0, available: 0, updatedAt: null },
+                'อญ.3': { max: 0, occupied: 0, available: 0, updatedAt: null }
+            }
+        };
+
+        let boardRecords = {};
+        let allRecordsList = [];
+
+        function maskHN(hn) {
+            if (!hn || hn.length < 4) return hn;
+            return `***${hn.slice(-3)}`;
+        }
+
+        let datePickerInstance = null;
+        function initDateFilter() {
+            datePickerInstance = flatpickr("#summaryDateFilter", {
+                dateFormat: "d/m/Y",
+                defaultDate: new Date(),
+                locale: "th",
+                disableMobile: "true",
+                onChange: function () {
+                    renderDailySummaryTable();
+                }
+            });
+        }
+
+        function syncCycleDropdowns(records) {
+            const sectionMaxCycles = { 'male-normal': 1, 'male-vent': 1, 'female-normal': 1, 'female-vent': 1 };
+            records.forEach(r => {
+                if (r.section && r.cycle && r.cycle > sectionMaxCycles[r.section]) {
+                    sectionMaxCycles[r.section] = r.cycle;
+                }
+            });
+
+            Object.keys(sectionCycles).forEach(sec => {
+                if (sectionCycles[sec] > sectionMaxCycles[sec]) {
+                    sectionMaxCycles[sec] = sectionCycles[sec];
+                }
+            });
+
+            ['male-normal', 'male-vent', 'female-normal', 'female-vent'].forEach(sec => {
+                const select = document.getElementById(`cycle-${sec}`);
+                select.innerHTML = '';
+                for (let i = 1; i <= sectionMaxCycles[sec]; i++) {
+                    const opt = document.createElement('option');
+                    opt.value = i;
+                    opt.textContent = i;
+                    if (i === sectionCycles[sec]) opt.selected = true;
+                    select.appendChild(opt);
+                }
+            });
+        }
+
+        function getWardUsage(sectionKey) {
+            const curCycle = sectionCycles[sectionKey] || 1;
+            const gender = sectionKey.startsWith('male') ? 'male' : 'female';
+            const prefix = gender === 'male' ? 'อช' : 'อญ';
+            const details = (wardDetailedLimits && wardDetailedLimits[gender]) ? wardDetailedLimits[gender] : {};
+            const usage = { [`${prefix}.1`]: 0, [`${prefix}.2`]: 0, [`${prefix}.3`]: 0 };
+
+            if (!boardRecords) return usage;
+
+            for (let key in boardRecords) {
+                const item = boardRecords[key];
+                if (item && item.section === sectionKey && Number(item.cycle) === Number(curCycle)) {
+                    let targetWard = item.ward;
+                    if (!targetWard && item.slot_id) {
+                        const parts = item.slot_id.split('-');
+                        const index = parseInt(parts[1], 10);
+                        const num = ventPattern[index];
+                        if (num) targetWard = `${prefix}.${num}`;
+                    }
+
+                    if (targetWard && usage[targetWard] !== undefined) {
+                        const wardConfig = details[targetWard];
+                        if (wardConfig && wardConfig.updatedAt && (item.created || item.created_at)) {
+                            const itemTime = new Date(item.created || item.created_at).getTime();
+                            const shiftTime = new Date(wardConfig.updatedAt).getTime();
+                            if (!isNaN(itemTime) && !isNaN(shiftTime)) {
+                                if (itemTime >= shiftTime) {
+                                    usage[targetWard]++;
+                                }
+                            } else {
+                                usage[targetWard]++;
+                            }
+                        } else {
+                            usage[targetWard]++;
+                        }
+                    }
+                }
+            }
+            return usage;
+        }
+
+        function renderQuotaBars() {
+            const renderBar = (gender, containerId, prefix) => {
+                const container = document.getElementById(containerId);
+                container.innerHTML = '';
+                const details = wardDetailedLimits[gender];
+                const usages = getWardUsage(`${gender}-vent`);
+
+                [1, 2, 3].forEach(idx => {
+                    const wardName = `${prefix}.${idx}`;
+                    const wardData = details[wardName] || { max: 0, occupied: 0, available: 0 };
+                    const used = usages[wardName] || 0;
+                    const remain = Math.max(0, wardData.available - used);
+                    const isFull = (wardData.available > 0 && remain === 0) || (wardData.available === 0);
+
+                    const div = document.createElement('div');
+                    div.className = `p-1.5 rounded-xl border text-center text-[10px] ${isFull
+                        ? 'bg-rose-100 border-rose-300 text-rose-800'
+                        : 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                        }`;
+                    div.innerHTML = `
+                        <div class="font-black">${wardName} (ช่อง ${idx})</div>
+                        <div>${isFull ? '<b>เต็ม</b>' : `ว่าง <b>${remain}</b>/${wardData.available}`}</div>
+                        <div class="text-[9px] text-slate-500 font-normal">ครอง ${wardData.occupied}/${wardData.max}</div>
+                    `;
+                    container.appendChild(div);
+                });
+            };
+
+            renderBar('male', 'quotaBarMale', 'อช');
+            renderBar('female', 'quotaBarFemale', 'อญ');
+        }
+
+        // ตรวจสอบรอบเวร ER: เช้า (08.30-16.30), บ่าย (16.30-00.30), ดึก (00.30-08.30)
+        function getCurrentShiftWindow() {
+            const now = new Date();
+            const curHour = now.getHours();
+            const curMinute = now.getMinutes();
+            const currentTimeInMinutes = curHour * 60 + curMinute;
+
+            let shiftStart = new Date(now);
+            let shiftName = '';
+
+            const morningStart = 8 * 60 + 30;    // 08:30 น.
+            const afternoonStart = 16 * 60 + 30; // 16:30 น.
+            const nightStart = 0 * 60 + 30;      // 00:30 น.
+
+            if (currentTimeInMinutes >= morningStart && currentTimeInMinutes < afternoonStart) {
+                shiftName = 'เวรเช้า';
+                shiftStart.setHours(8, 30, 0, 0);
+            } else if (currentTimeInMinutes >= afternoonStart) {
+                shiftName = 'เวรบ่าย';
+                shiftStart.setHours(16, 30, 0, 0);
+            } else if (currentTimeInMinutes >= nightStart && currentTimeInMinutes < morningStart) {
+                shiftName = 'เวรดึก';
+                shiftStart.setHours(0, 30, 0, 0);
+            } else {
+                // ช่วง 00:00 - 00:29 น. ยังนับเป็นปลายเวรบ่ายของวันก่อนหน้า
+                shiftName = 'เวรบ่าย';
+                shiftStart.setDate(shiftStart.getDate() - 1);
+                shiftStart.setHours(16, 30, 0, 0);
+            }
+
+            // ระยะผ่อนผัน 30 นาทีแรกของเวร (เช่น เวรเช้าเริ่มล็อกจริงหลัง 09:00 น.)
+            const gracePeriodEnd = new Date(shiftStart.getTime() + 30 * 60 * 1000);
+            const isPastGracePeriod = now > gracePeriodEnd;
+
+            return { shiftName, shiftStart, isPastGracePeriod };
+        }
+
+        // ตรวจสอบว่า Incharge อัปเดตยอดของเวรปัจจุบันแล้วหรือยัง
+        function isVentQuotaStale(gender) {
+            const { shiftStart, isPastGracePeriod } = getCurrentShiftWindow();
+
+            // ถ้ายังอยู่ในช่วง 30 นาทีแรกของการส่งเวร จะยังไม่ล็อก
+            if (!isPastGracePeriod) return false;
+
+            const details = wardDetailedLimits[gender];
+            if (!details) return false;
+
+            // หาเวลา updatedAt ล่าสุดของฝั่งนั้น
+            let latestUpdate = null;
+            for (let ward in details) {
+                if (details[ward].updatedAt) {
+                    const t = new Date(details[ward].updatedAt).getTime();
+                    if (!latestUpdate || t > latestUpdate) latestUpdate = t;
+                }
+            }
+
+            // ถ้ายังไม่เคยอัปเดต หรือเวลาอัปเดตเก่ากว่าเวลาเริ่มเวรปัจจุบัน = ค้างเวรเก่า
+            if (!latestUpdate || latestUpdate < shiftStart.getTime()) {
+                return true;
+            }
+
+            return false;
+        }
+
+        function calculateWardModal() {
+            let totalAvail = 0;
+            ['male', 'female'].forEach(gender => {
+                const prefix = gender === 'male' ? 'Male' : 'Female';
+                for (let i = 1; i <= 3; i++) {
+                    const max = parseInt(document.getElementById(`${gender}_max_${i}`)?.value, 10) || 0;
+                    const occ = parseInt(document.getElementById(`${gender}_occ_${i}`)?.value, 10) || 0;
+                    const avail = Math.max(0, max - occ);
+                    const el = document.getElementById(`calc${prefix}${i}`);
+                    if (el) el.textContent = `ว่าง ${avail}`;
+                    totalAvail += avail;
+                }
+            });
+            const totalEl = document.getElementById('calcTotalAvailableAll');
+            if (totalEl) totalEl.textContent = `${totalAvail} เครื่อง`;
+        }
+
+        ['male', 'female'].forEach(gender => {
+            for (let i = 1; i <= 3; i++) {
+                document.getElementById(`${gender}_max_${i}`)?.addEventListener('input', calculateWardModal);
+                document.getElementById(`${gender}_occ_${i}`)?.addEventListener('input', calculateWardModal);
+            }
+        });
+
+        function openQuotaModal() {
+            ['male', 'female'].forEach(gender => {
+                const prefix = gender === 'male' ? 'อช' : 'อญ';
+                const details = wardDetailedLimits[gender] || {};
+                for (let i = 1; i <= 3; i++) {
+                    const w = details[`${prefix}.${i}`] || { max: 0, occupied: 0 };
+                    const maxInput = document.getElementById(`${gender}_max_${i}`);
+                    const occInput = document.getElementById(`${gender}_occ_${i}`);
+                    if (maxInput) maxInput.value = w.max || '';
+                    if (occInput) occInput.value = w.occupied || '';
+                }
+            });
+
+            calculateWardModal();
+            document.getElementById('quotaModal').classList.remove('hidden');
+        }
+
+        function closeQuotaModal() {
+            document.getElementById('quotaModal').classList.add('hidden');
+        }
+
+        // บันทึกโควตาพร้อมกันทั้ง 6 วอร์ด
+        async function saveVentQuotaCombined(mode) {
+            const isNewShift = mode === 'new_shift';
+            const nowIso = new Date().toISOString();
+            const itemsToSave = [];
+
+            ['male', 'female'].forEach(gender => {
+                const prefix = gender === 'male' ? 'อช' : 'อญ';
+                for (let idx = 1; idx <= 3; idx++) {
+                    const wardName = `${prefix}.${idx}`;
+                    const max = parseInt(document.getElementById(`${gender}_max_${idx}`)?.value, 10) || 0;
+                    const occ = parseInt(document.getElementById(`${gender}_occ_${idx}`)?.value, 10) || 0;
+                    const avail = Math.max(0, max - occ);
+
+                    const existingItem = wardDetailedLimits[gender][wardName];
+                    const shiftTime = isNewShift ? nowIso : (existingItem?.updatedAt || nowIso);
+
+                    wardDetailedLimits[gender][wardName] = {
+                        max: max,
+                        occupied: occ,
+                        available: avail,
+                        updatedAt: shiftTime
+                    };
+
+                    itemsToSave.push({
+                        gender: gender,
+                        ward_name: wardName,
+                        max_cap: max,
+                        occupied: occ,
+                        available: avail,
+                        updated_at_shift: shiftTime
+                    });
+                }
+            });
+
+            localStorage.setItem('er_ward_detailed_limits', JSON.stringify(wardDetailedLimits));
+            renderQuotaBars();
+            closeQuotaModal();
+
+            if (isNewShift) {
+                alert("✅ บันทึกเริ่มเวรใหม่เรียบร้อย (ระบบล็อกคิวเก่าทั้งหมด)");
+            } else {
+                alert("✅ อัปเดตยอดระหว่างเวรเรียบร้อย");
+            }
+
+            try {
+                await fetch(GAS_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'save_quota',
+                        items: itemsToSave
+                    })
+                });
+            } catch (err) {
+                console.error("บันทึกโควตาไม่สำเร็จ:", err);
+            }
+        }
+
+        // ฟังก์ชันปุ่มลัด: ใช้ยอดเดิม แต่ประทับเวลาเริ่มเวรใหม่ทันที (1 คลิก)
+        async function confirmSameQuota() {
+            await saveVentQuotaCombined('new_shift');
+        }
+
+        function changeSectionCycle(sectionKey, newCycleVal) {
+            sectionCycles[sectionKey] = parseInt(newCycleVal, 10);
+            localStorage.setItem('er_section_cycles', JSON.stringify(sectionCycles));
+            renderAllGrids();
+        }
+
+        // ตรวจสอบการเต็มแยกเฉพาะหมวด (sectionKey ใครหมวดมัน)
+        function getActiveCycleForSection(sectionKey) {
+            let curCycle = sectionCycles[sectionKey] || 1;
+            const isVent = sectionKey.includes('vent');
+            const totalSlots = isVent ? ventPattern.length : normalPattern.length;
+
+            let filledCount = 0;
+            for (let i = 0; i < totalSlots; i++) {
+                const slotId = `${sectionKey}-${i}-c${curCycle}`;
+                if (boardRecords[slotId]) {
+                    filledCount++;
+                }
+            }
+
+            if (filledCount >= totalSlots) {
+                curCycle += 1;
+                sectionCycles[sectionKey] = curCycle;
+                localStorage.setItem('er_section_cycles', JSON.stringify(sectionCycles));
+            }
+
+            return curCycle;
+        }
+
+        // ตรวจสอบว่าโควตาวอร์ดนั้นๆ เต็มแล้วหรือไม่
+        function isWardVentFull(sectionKey, wardName) {
+            if (!sectionKey.includes('vent')) return false;
+
+            const gender = sectionKey.startsWith('male') ? 'male' : 'female';
+            const details = (wardDetailedLimits && wardDetailedLimits[gender]) ? wardDetailedLimits[gender] : {};
+            const usages = getWardUsage(sectionKey);
+
+            const wardData = details[wardName] || { max: 0, occupied: 0, available: 0 };
+            const maxVal = parseInt(wardData.max, 10) || 0;
+            const availVal = parseInt(wardData.available, 10) || 0;
+            const used = usages[wardName] || 0;
+            const remain = availVal - used;
+
+            // ถ้ายังไม่ได้ตั้งค่าลิมิตเลย (0 ทั้งคู่) ไม่ถือว่าเต็ม ให้กาได้
+            if (maxVal === 0 && availVal === 0) return false;
+
+            // ถ้าโควตาว่างเหลือ 0 หรือติดลบ = เต็ม
+            return remain <= 0;
+        }
+
+        function updateStats() {
+            let stats = { 'male-normal': 0, 'male-vent': 0, 'female-normal': 0, 'female-vent': 0 };
+
+            for (let key in boardRecords) {
+                const r = boardRecords[key];
+                if (r && r.section && Number(r.cycle) === Number(sectionCycles[r.section])) {
+                    stats[r.section]++;
+                }
+            }
+
+            document.getElementById('stat-male-normal').textContent = `${stats['male-normal']} ราย (รอบ ${sectionCycles['male-normal'] || 1})`;
+            document.getElementById('stat-male-vent').textContent = `${stats['male-vent']} ราย (รอบ ${sectionCycles['male-vent'] || 1})`;
+            document.getElementById('stat-female-normal').textContent = `${stats['female-normal']} ราย (รอบ ${sectionCycles['female-normal'] || 1})`;
+            document.getElementById('stat-female-vent').textContent = `${stats['female-vent']} ราย (รอบ ${sectionCycles['female-vent'] || 1})`;
+        }
+
+        function renderAllGrids() {
+            renderSection('male-normal', 'grid-male-normal', normalPattern, 'ชาย - Que ปกติ', false);
+            renderSection('male-vent', 'grid-male-vent', ventPattern, 'ชาย - Ventilator', true);
+            renderSection('female-normal', 'grid-female-normal', normalPattern, 'หญิง - Que ปกติ', false);
+            renderSection('female-vent', 'grid-female-vent', ventPattern, 'หญิง - Ventilator', true);
+            updateStats();
+        }
+
+        function renderSection(sectionKey, containerId, pattern, labelPrefix, isVent) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            const currentSectionCycle = sectionCycles[sectionKey];
+            const prefix = sectionKey.startsWith('male') ? 'อช' : 'อญ';
+
+            pattern.forEach((num, index) => {
+                const slotId = `${sectionKey}-${index}-c${currentSectionCycle}`;
+                const item = boardRecords[slotId];
+                const isCrossed = !!item;
+                const wardName = `${prefix}.${num}`;
+
+                const box = document.createElement('div');
+                let baseStyle = "h-11 sm:h-12 border border-slate-300 rounded-lg flex flex-col items-center justify-center transition select-none relative overflow-hidden ";
+
+                if (isCrossed) {
+                    // 🔒 ช่องที่มีการกาคิวแล้ว
+                    const isLocked = isQueueLockedByShift(item);
+                    let crossClass = isLocked ? 'crossed-box-locked' : (isVent ? 'crossed-box-vent' : 'crossed-box');
+
+                    box.className = baseStyle + crossClass + " cursor-pointer";
+
+                    const textBadgeColor = isLocked
+                        ? 'text-slate-600 bg-slate-200/90'
+                        : (isVent ? 'text-rose-700 bg-white/90' : 'text-blue-700 bg-white/90');
+
+                    box.innerHTML = `
+                <span class="text-[10px] font-black ${textBadgeColor} z-10 px-1 rounded shadow-sm flex items-center gap-0.5">
+                    ${isLocked ? '<i class="fa-solid fa-lock text-[8px] text-slate-500"></i>' : ''}
+                    ${item.masked_hn}
+                </span>
+                <span class="text-[8px] ${isLocked ? 'text-slate-400' : 'text-slate-500'} font-bold z-10 bg-white/80 px-1 rounded">${item.time}</span>
+            `;
+                    box.onclick = () => openDetail(slotId, labelPrefix, num, item, wardName);
+
+                } else {
+                    // ⬜ ช่องว่าง: ตรวจสอบว่าวอร์ด Vent นี้เต็มหรือยัง
+                    const isWardFull = isVent && isWardVentFull(sectionKey, wardName);
+
+                    if (isWardFull) {
+                        // 🛑 กรณีวอร์ดเต็ม: คลุมสีเทา + ไม่ให้คลิกกา
+                        box.className = baseStyle + "slot-ward-full";
+                        box.innerHTML = `
+                    <span class="text-xs sm:text-sm font-bold">${num}</span>
+                    <span class="text-[8px] font-bold text-rose-500 leading-none">เต็ม</span>
+                `;
+                        box.title = `วอร์ด ${wardName} โควตา Vent เต็มแล้ว`;
+                        box.onclick = () => {
+                            alert(`⚠️ วอร์ด ${wardName} โควตาเครื่องช่วยหายใจเต็มแล้วในเวรนี้\nหากต้องการกาเพิ่ม กรุณาให้ Incharge ไปปรับยอดใน "ตั้งลิมิต Vent ประจำเวร"`);
+                        };
+                    } else {
+                        // 🟢 กรณีว่างปกติ: สีกระดานขาวพร้อมให้กดกา
+                        box.className = baseStyle + "bg-white hover:bg-blue-50 hover:border-blue-400 cursor-pointer";
+                        box.innerHTML = `<span class="text-sm sm:text-base font-bold text-slate-500">${num}</span>`;
+                        box.onclick = () => openBooking(slotId, sectionKey, currentSectionCycle, num, wardName, `${labelPrefix} (ช่องเลข ${num} - ${wardName}) [รอบ ${currentSectionCycle}]`);
+                    }
+                }
+
+                container.appendChild(box);
+            });
+        }
+
+        // ตรวจสอบว่าคิวนี้บันทึกก่อนเวลาเริ่มเวรใหม่ล่าสุดหรือไม่ (ถ้าใช่ = ล็อก)
+        function isQueueLockedByShift(item) {
+            if (!item) return false;
+
+            const gender = (item.section && item.section.startsWith('male')) ? 'male' : 'female';
+            const prefix = gender === 'male' ? 'อช' : 'อญ';
+
+            let targetWard = item.ward;
+            if (!targetWard && item.slot_id) {
+                const parts = item.slot_id.split('-');
+                let slotIndex = null;
+                for (let p of parts) {
+                    if (/^\d+$/.test(p)) {
+                        slotIndex = parseInt(p, 10);
+                        break;
+                    }
+                }
+                const isVent = item.section && item.section.includes('vent');
+                const pattern = isVent ? ventPattern : normalPattern;
+                if (slotIndex !== null && pattern && pattern[slotIndex] !== undefined) {
+                    targetWard = `${prefix}.${pattern[slotIndex]}`;
+                }
+            }
+
+            const wardData = (wardDetailedLimits[gender] && targetWard) ? wardDetailedLimits[gender][targetWard] : null;
+            const shiftStartTime = wardData?.updatedAt;
+
+            if (!shiftStartTime) return false;
+
+            let itemTime = null;
+            if (item.created) {
+                itemTime = new Date(item.created).getTime();
+            } else if (item.created_at) {
+                itemTime = new Date(item.created_at).getTime();
+            } else if (item.id && String(item.id).startsWith('temp-')) {
+                itemTime = parseInt(String(item.id).replace('temp-', ''), 10);
+            }
+
+            if (!itemTime || isNaN(itemTime)) return false;
+
+            const shiftTime = new Date(shiftStartTime).getTime();
+            if (isNaN(shiftTime)) return false;
+
+            return itemTime < shiftTime;
+        }
+
+        function renderDailySummaryTable() {
+            const selectedDateStr = document.getElementById('summaryDateFilter').value.trim();
+            const tbody = document.getElementById('dailySummaryTableBody');
+            tbody.innerHTML = '';
+
+            const sectionLabels = {
+                'male-normal': { text: 'ชาย - Que ปกติ', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+                'male-vent': { text: 'ชาย - Ventilator', color: 'bg-rose-50 text-rose-700 border-rose-200' },
+                'female-normal': { text: 'หญิง - Que ปกติ', color: 'bg-pink-50 text-pink-700 border-pink-200' },
+                'female-vent': { text: 'หญิง - Ventilator', color: 'bg-rose-50 text-rose-700 border-rose-200' }
+            };
+
+            let dailyStats = { total: 0, 'male-normal': 0, 'male-vent': 0, 'female-normal': 0, 'female-vent': 0 };
+
+            const [filterD, filterM, filterY] = selectedDateStr.split('/');
+            const filterYearNum = parseInt(filterY, 10);
+
+            const filtered = allRecordsList.filter(item => {
+                if (item.date_th) {
+                    const dateVal = String(item.date_th).trim();
+                    if (dateVal === selectedDateStr) return true;
+
+                    const parts = dateVal.split('/');
+                    if (parts.length === 3) {
+                        const [d, m, y] = parts;
+                        const rowYear = parseInt(y, 10);
+                        const isSameYear = (rowYear === filterYearNum) || (rowYear === filterYearNum + 543) || (rowYear === filterYearNum - 543);
+                        if (parseInt(d, 10) === parseInt(filterD, 10) && parseInt(m, 10) === parseInt(filterM, 10) && isSameYear) {
+                            return true;
+                        }
+                    }
+                }
+
+                if (item.created || item.created_at) {
+                    const d = new Date(item.created || item.created_at);
+                    if (!isNaN(d.getTime())) {
+                        const day = String(d.getDate()).padStart(2, '0');
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const year = d.getFullYear();
+                        if (`${day}/${month}/${year}` === selectedDateStr) return true;
+                        if (`${day}/${month}/${year + 543}` === selectedDateStr) return true;
+                    }
+                }
+
+                return false;
+            });
+
+            filtered.forEach(row => {
+                dailyStats.total++;
+                if (dailyStats[row.section] !== undefined) dailyStats[row.section]++;
+
+                const conf = sectionLabels[row.section] || { text: row.section, color: 'bg-slate-100 text-slate-700' };
+
+                let displayWard = row.ward;
+                if (!displayWard && row.slot_id) {
+                    const parts = row.slot_id.split('-');
+                    const prefix = (row.section && row.section.startsWith('male')) ? 'อช' : 'อญ';
+                    const isVent = (row.section && row.section.includes('vent'));
+                    const pattern = isVent ? ventPattern : normalPattern;
+
+                    let slotIndex = null;
+                    for (let p of parts) {
+                        if (/^\d+$/.test(p)) {
+                            slotIndex = parseInt(p, 10);
+                            break;
+                        }
+                    }
+
+                    if (slotIndex !== null && pattern && pattern[slotIndex] !== undefined) {
+                        displayWard = `${prefix}.${pattern[slotIndex]}`;
+                    }
+                }
+
+                const isVentCase = row.section && row.section.includes('vent');
+                const wardBadgeClass = isVentCase
+                    ? 'bg-rose-100 text-rose-800 border-rose-200'
+                    : 'bg-blue-100 text-blue-800 border-blue-200';
+
+                const isLocked = isQueueLockedByShift(row);
+                const actionButton = isLocked
+                    ? `<span class="px-2.5 py-1 bg-slate-100 text-slate-400 border border-slate-200 rounded-lg text-xs font-bold inline-block"><i class="fa-solid fa-lock mr-1"></i> ล็อก</span>`
+                    : `<button onclick="deleteRowDirect('${row.id}', '${row.hn}')" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition"><i class="fa-solid fa-trash-can mr-1"></i> ลบคิว</button>`;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition";
+                tr.innerHTML = `
+                    <td class="py-2.5 px-4 text-slate-700 font-bold whitespace-nowrap">${row.time || '-'}</td>
+                    <td class="py-2.5 px-4 font-black text-blue-700 whitespace-nowrap">
+                        <span id="summary-hn-${row.id}">${row.masked_hn || row.hn}</span>
+                        <button onclick="toggleHnInRow('${row.id}', '${row.hn}', '${row.masked_hn}')" class="ml-1 text-[11px] text-slate-400 hover:text-blue-600 font-normal">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </td>
+                    <td class="py-2.5 px-4 whitespace-nowrap">
+                        <span class="text-xs font-bold border px-2.5 py-0.5 rounded-full ${conf.color}">${conf.text}</span>
+                    </td>
+                    <td class="py-2.5 px-4 font-bold whitespace-nowrap">
+                        ${displayWard ? `<span class="${wardBadgeClass} px-2 py-0.5 rounded-md border font-black">${displayWard}</span>` : '-'}
+                    </td>
+                    <td class="py-2.5 px-4 font-bold text-slate-600 whitespace-nowrap">รอบที่ ${row.cycle || 1}</td>
+                    <td class="py-2.5 px-4 text-slate-600 whitespace-nowrap">${row.booked_by || '-'}</td>
+                    <td class="py-2.5 px-4 text-center whitespace-nowrap">${actionButton}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400 font-bold">ไม่มีข้อมูลการกาคิวในวันที่ ${selectedDateStr}</td></tr>`;
+            }
+
+            document.getElementById('daily-total-all').textContent = `${dailyStats.total} ราย`;
+            document.getElementById('daily-total-male-normal').textContent = dailyStats['male-normal'];
+            document.getElementById('daily-total-male-vent').textContent = dailyStats['male-vent'];
+            document.getElementById('daily-total-female-normal').textContent = dailyStats['female-normal'];
+            document.getElementById('daily-total-female-vent').textContent = dailyStats['female-vent'];
+        }
+
+        function toggleHnInRow(id, fullHn, maskedHn) {
+            const el = document.getElementById(`summary-hn-${id}`);
+            el.textContent = el.textContent.includes('*') ? fullHn : maskedHn;
+        }
+
+        async function deleteRowDirect(recordId, hn) {
+            if (!confirm(`ยืนยันลบกากบาทของเคส HN: ${hn} ใช่หรือไม่?`)) return;
+
+            let targetSlotId = null;
+
+            for (let key in boardRecords) {
+                if (boardRecords[key].id === recordId) {
+                    targetSlotId = key;
+                    delete boardRecords[key];
+                    break;
+                }
+            }
+
+            pendingDeletes.add(String(recordId));
+            if (targetSlotId) {
+                pendingDeletes.add(targetSlotId);
+                delete pendingQueues[targetSlotId];
+            }
+
+            allRecordsList = allRecordsList.filter(item => String(item.id) !== String(recordId));
+
+            renderAllGrids();
+            renderDailySummaryTable();
+            renderQuotaBars();
+
+            try {
+                await fetch(GAS_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'delete_queue', id: recordId })
+                });
+
+                setTimeout(() => {
+                    pendingDeletes.delete(String(recordId));
+                    if (targetSlotId) pendingDeletes.delete(targetSlotId);
+                }, 3000);
+
+            } catch (err) {
+                console.error("Delete Error:", err);
+                pendingDeletes.delete(String(recordId));
+                if (targetSlotId) pendingDeletes.delete(targetSlotId);
+            }
+        }
+
+        function checkVentSlotQuota(sectionKey, wardName) {
+            try {
+                const gender = sectionKey.startsWith('male') ? 'male' : 'female';
+                const details = (wardDetailedLimits && wardDetailedLimits[gender]) ? wardDetailedLimits[gender] : {};
+                const usages = getWardUsage(sectionKey);
+
+                const wardData = details[wardName] || { max: 0, occupied: 0, available: 0 };
+                const maxVal = parseInt(wardData.max, 10) || 0;
+                const availVal = parseInt(wardData.available, 10) || 0;
+                const used = usages[wardName] || 0;
+                const remain = availVal - used;
+
+                if (maxVal === 0 && availVal === 0) {
+                    return confirm(`⚠️ วอร์ด ${wardName} ยังไม่ได้ตั้งลิมิตเตียงในเวรนี้\nต้องการบันทึกกาคิวต่อหรือไม่?`);
+                }
+
+                if (remain <= 0) {
+                    alert(`⚠️ โควตา ${wardName} เต็มแล้ว!\n(รับได้ ${availVal} เครื่อง / กาไปแล้ว ${used} ราย)\nหากต้องการเพิ่มให้ไปกด "ตั้งลิมิต Vent ประจำเวร" เพื่อปรับยอดครองเตียง`);
+                    return false;
+                }
+
+                return true;
+            } catch (err) {
+                console.error("Quota Check Bypass:", err);
+                return true;
+            }
+        }
+
+        function openBooking(slotId, sectionKey, cycleVal, num, wardName, label) {
+            const isVent = sectionKey.includes('vent');
+            const gender = sectionKey.startsWith('male') ? 'male' : 'female';
+
+            // 🔒 1. เช็กการล็อกเวรของ Incharge ก่อน
+            if (isVent && isVentQuotaStale(gender)) {
+                const { shiftName } = getCurrentShiftWindow();
+                alert(`⚠️ รอยืนยันยอด Vent (${shiftName})\n\nระบบตรวจพบว่า Incharge ยังไม่ได้ยืนยันยอดโควตาเตียงประจำ${shiftName}\nกรุณาให้ Incharge กดยืนยันยอดเตียงว่างก่อนเริ่มกาคิวเคส Vent`);
+                openQuotaModal();
+                return;
+            }
+
+            if (isVent) {
+                if (!checkVentSlotQuota(sectionKey, wardName)) {
+                    return;
+                }
+            }
+
+            const currentActiveCycle = sectionCycles[sectionKey] || 1;
+
+            document.getElementById('selectedSlotId').value = slotId;
+            document.getElementById('selectedSection').value = sectionKey;
+            document.getElementById('selectedSectionCycle').value = currentActiveCycle;
+            document.getElementById('selectedNum').value = num;
+            document.getElementById('selectedWard').value = wardName;
+            document.getElementById('modalTargetTitle').textContent = `${label} [รอบ ${currentActiveCycle}]`;
+            document.getElementById('bookedByInput').value = currentStaffName;
+
+            const hnInput = document.getElementById('hnInput');
+            hnInput.value = '';
+            document.getElementById('bookingModal').classList.remove('hidden');
+            setTimeout(() => hnInput.focus(), 100);
+        }
+
+        function closeModal() {
+            stopCameraScan();
+            document.getElementById('bookingModal').classList.add('hidden');
+        }
+
+        async function handleBookingSubmit(e) {
+            e.preventDefault();
+
+            let slotId = document.getElementById('selectedSlotId').value;
+            const sectionKey = document.getElementById('selectedSection').value;
+            const wardName = document.getElementById('selectedWard').value;
+            const hn = document.getElementById('hnInput').value.trim();
+            const bookedBy = document.getElementById('bookedByInput').value.trim();
+
+            if (!hn || !bookedBy) return;
+            if (sectionKey.includes('vent') && !checkVentSlotQuota(sectionKey, wardName)) return;
+
+            const activeCycle = getActiveCycleForSection(sectionKey);
+
+            const parts = slotId.split('-');
+            const slotIndex = parts[parts.length - 2];
+            slotId = `${sectionKey}-${slotIndex}-c${activeCycle}`;
+
+            currentStaffName = bookedBy;
+            localStorage.setItem('er_staff_name', bookedBy);
+            if (document.getElementById('staffSelector')) {
+                document.getElementById('staffSelector').value = bookedBy;
+            }
+
+            const now = new Date();
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} น.`;
+            const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+
+            closeModal();
+
+            const tempRecord = {
+                id: 'temp-' + Date.now(),
+                slot_id: slotId,
+                section: sectionKey,
+                hn: hn,
+                masked_hn: maskHN(hn),
+                cycle: activeCycle,
+                ward: wardName,
+                time: timeStr,
+                date_th: dateStr,
+                booked_by: bookedBy,
+                created: now.toISOString()
+            };
+
+            pendingDeletes.delete(slotId);
+            pendingQueues[slotId] = tempRecord;
+            boardRecords[slotId] = tempRecord;
+            allRecordsList.unshift(tempRecord);
+
+            syncCycleDropdowns(allRecordsList);
+            renderAllGrids();
+            renderDailySummaryTable();
+            renderQuotaBars();
+
+            try {
+                await fetch(GAS_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'create_queue',
+                        ...tempRecord
+                    })
+                });
+            } catch (err) {
+                console.error("เบื้องหลังส่งไม่สำเร็จ:", err);
+                delete pendingQueues[slotId];
+            }
+        }
+
+        function openDetail(slotId, labelPrefix, num, item, wardName) {
+            const isLocked = isQueueLockedByShift(item);
+
+            document.getElementById('detailContent').innerHTML = `
+                <div><b>ตำแหน่ง:</b> ${labelPrefix} (ช่อง ${num} - ${wardName}) [รอบ ${item.cycle}]</div>
+                ${item.ward ? `<div><b>วอร์ดปลายทาง:</b> <span class="bg-rose-100 text-rose-800 px-2 py-0.5 rounded font-black">${item.ward}</span></div>` : ''}
+                <div class="flex items-center justify-between py-2 bg-slate-50 px-3 rounded-xl border border-slate-200">
+                    <span><b>HN:</b> <span id="viewHnText" class="text-blue-700 font-bold text-base">${item.masked_hn}</span></span>
+                    <button onclick="toggleHnView('${item.hn}')" class="text-xs bg-white border border-slate-300 px-2 py-1 rounded-lg text-slate-700 hover:text-blue-600 font-bold">
+                        <i class="fa-solid fa-eye"></i> ดูเต็ม
+                    </button>
+                </div>
+                <div><b>เวลาบันทึก:</b> ${item.time}</div>
+                <div><b>ผู้บันทึก:</b> <span class="text-slate-800 font-semibold">${item.booked_by || '-'}</span></div>
+                ${isLocked ? `<div class="mt-2 text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200 p-2 rounded-lg text-center"><i class="fa-solid fa-lock mr-1"></i> ล็อกคิว: เป็นรายการก่อนเริ่มเวรใหม่ของ Incharge ไม่สามารถลบได้</div>` : ''}
+            `;
+
+            const releaseBtn = document.getElementById('btnReleaseBox');
+            if (isLocked) {
+                releaseBtn.disabled = true;
+                releaseBtn.className = "w-1/2 py-2.5 rounded-xl bg-slate-200 text-slate-400 font-bold cursor-not-allowed";
+                releaseBtn.onclick = null;
+            } else {
+                releaseBtn.disabled = false;
+                releaseBtn.className = "w-1/2 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold";
+                releaseBtn.onclick = async () => {
+                    closeDetailModal();
+                    await deleteRowDirect(item.id, item.hn);
+                };
+            }
+
+            document.getElementById('detailModal').classList.remove('hidden');
+        }
+
+        function toggleHnView(fullHn) {
+            const el = document.getElementById('viewHnText');
+            el.textContent = el.textContent.includes('*') ? fullHn : maskHN(fullHn);
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').classList.add('hidden');
+        }
+
+        let html5QrCode = null;
+
+        async function startCameraScan() {
+            const previewContainer = document.getElementById('cameraPreview');
+            previewContainer.classList.remove('hidden');
+
+            // ตรวจสอบความปลอดภัย HTTPS
+            if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+                alert("⚠️ กล้องใช้งานได้เฉพาะบนเว็บไซต์ที่มีความปลอดภัย (HTTPS) หรือ localhost เท่านั้น");
+                previewContainer.classList.add('hidden');
+                return;
+            }
+
+            try {
+                // เคลียร์ instance เก่าก่อนถ้ามีค้างอยู่
+                if (html5QrCode) {
+                    try {
+                        await html5QrCode.stop();
+                        html5QrCode.clear();
+                    } catch (e) {
+                        // ข้าม error กรณีกล้องยังไม่ได้รัน
+                    }
+                }
+
+                html5QrCode = new Html5Qrcode("reader");
+
+                // กำหนดการตั้งค่ากล้องให้รองรับทั้งบาร์โค้ดแท่ง (1D) และ QR Code
+                const config = {
+                    fps: 15,
+                    qrbox: (viewfinderWidth, viewfinderHeight) => {
+                        // กรอบสแกนแนวนอนกว้าง เหมาะกับบาร์โค้ดสติ๊กเกอร์คนไข้
+                        const width = Math.floor(viewfinderWidth * 0.85);
+                        const height = Math.floor(viewfinderHeight * 0.45);
+                        return { width: Math.max(width, 220), height: Math.max(height, 100) };
+                    },
+                    aspectRatio: 1.777778
+                };
+
+                // เริ่มต้นเปิดกล้องหลัง (Environment camera)
+                await html5QrCode.start(
+                    { facingMode: { exact: "environment" } }, // ลองเจาะจงกล้องหลังก่อน
+                    config,
+                    onScanSuccess,
+                    () => { } // ละเว้น frame error ระหว่างหามุม
+                );
+
+            } catch (err) {
+                console.warn("ไม่สามารถเปิด exact environment camera ได้ ลอง fallback ทั่วไป:", err);
+
+                // Fallback: หากบางอุปกรณ์ระบุ exact ไม่ได้ ให้เปิดกล้องทั่วไป
+                try {
+                    await html5QrCode.start(
+                        { facingMode: "environment" },
+                        { fps: 15, qrbox: { width: 250, height: 120 } },
+                        onScanSuccess,
+                        () => { }
+                    );
+                } catch (fallbackErr) {
+                    console.error("Camera Open Error:", fallbackErr);
+                    alert("⚠️ ไม่สามารถเปิดกล้องได้: กรุณาตรวจสอบการอนุญาตสิทธิ์ (Camera Permission) ในเบราว์เซอร์");
+                    stopCameraScan();
+                }
+            }
+        }
+
+        // เมื่อสแกนบาร์โค้ดสำเร็จ
+        function onScanSuccess(decodedText) {
+            if (!decodedText) return;
+
+            // ทำความสะอาดข้อความ (ตัดช่องว่างหรืออักขระพิเศษ)
+            const cleanHN = decodedText.trim();
+
+            const hnInput = document.getElementById('hnInput');
+            if (hnInput) {
+                hnInput.value = cleanHN;
+            }
+
+            // เสียงแจ้งเตือนสั้นๆ (Beep) เมื่อสแกนสำเร็จ
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = 880; // โน้ต A5
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            } catch (e) { }
+
+            // ปิดกล้องทันที
+            stopCameraScan();
+
+            // บันทึกฟอร์มอัตโนมัติทันที
+            const bookingForm = document.getElementById('bookingForm');
+            if (bookingForm) {
+                bookingForm.requestSubmit();
+            }
+        }
+
+        async function stopCameraScan() {
+            const previewContainer = document.getElementById('cameraPreview');
+            if (html5QrCode) {
+                try {
+                    if (html5QrCode.isScanning) {
+                        await html5QrCode.stop();
+                    }
+                    html5QrCode.clear();
+                } catch (err) {
+                    console.error("Error stopping camera:", err);
+                } finally {
+                    html5QrCode = null;
+                }
+            }
+            if (previewContainer) {
+                previewContainer.classList.add('hidden');
+            }
+        }
+
+        async function fetchAllDataFromGAS() {
+            try {
+                const res = await fetch(`${GAS_API_URL}?action=get_all`);
+                const json = await res.json();
+
+                if (json.status === 'success') {
+                    if (json.staffs && json.staffs.length > 0) {
+                        populateStaffDatalist(json.staffs);
+                    }
+
+                    const incomingQueues = (json.queues || []).filter(r =>
+                        !pendingDeletes.has(String(r.id)) && !pendingDeletes.has(r.slot_id)
+                    );
+
+                    allRecordsList = incomingQueues;
+                    boardRecords = {};
+
+                    allRecordsList.forEach(r => {
+                        if (r.slot_id) {
+                            boardRecords[r.slot_id] = r;
+                            if (pendingQueues[r.slot_id]) {
+                                delete pendingQueues[r.slot_id];
+                            }
+                        }
+                    });
+
+                    for (let sId in pendingQueues) {
+                        boardRecords[sId] = pendingQueues[sId];
+                        if (!allRecordsList.some(item => item.slot_id === sId)) {
+                            allRecordsList.unshift(pendingQueues[sId]);
+                        }
+                    }
+
+                    if (json.quotas) {
+                        json.quotas.forEach(q => {
+                            if (wardDetailedLimits[q.gender] && wardDetailedLimits[q.gender][q.ward_name]) {
+                                wardDetailedLimits[q.gender][q.ward_name] = {
+                                    max: q.max_cap || 0,
+                                    occupied: q.occupied || 0,
+                                    available: q.available || 0,
+                                    updatedAt: q.updated_at_shift || null
+                                };
+                            }
+                        });
+                        localStorage.setItem('er_ward_detailed_limits', JSON.stringify(wardDetailedLimits));
+                    }
+
+                    syncCycleDropdowns(allRecordsList);
+                    renderAllGrids();
+                    renderDailySummaryTable();
+                    renderQuotaBars();
+                }
+            } catch (err) {
+                console.error("GAS Load Error:", err);
+            }
+        }
+
+        let isFetchingData = false;
+
+        async function syncDataLoop() {
+            if (!isFetchingData) {
+                isFetchingData = true;
+                try {
+                    await fetchAllDataFromGAS();
+                } catch (err) {
+                    console.error("Sync Error:", err);
+                } finally {
+                    isFetchingData = false;
+                }
+            }
+            // รอ 3 วินาทีหลังจากรอบก่อนหน้าเสร็จสมบูรณ์แล้ว ค่อยเรียกซ้ำ
+            setTimeout(syncDataLoop, 3000);
+        }
+
+        async function startApp() {
+            initDateFilter();
+
+            syncCycleDropdowns([]);
+            renderAllGrids();
+            renderQuotaBars();
+            syncDataLoop();
+        }
+
+        startApp();
+
+        // ลงทะเบียน Service Worker สำหรับติดตั้งเป็น PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch((err) => {
+                    console.log('SW registration failed: ', err);
+                });
+            });
+        }
+    </script>
+</body>
+
+</html>
