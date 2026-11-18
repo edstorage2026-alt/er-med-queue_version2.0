@@ -14,7 +14,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600;700;800&family=Sarabun:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
-    <link rel="icon" type="image/png" sizes="192x192" href="logo_ER.png">
+    <link rel="icon" type="image/x-icon" href="logo_ER.ico">
     <!-- Camera Barcode Scanner -->
     <script src="https://unpkg.com/html5-qrcode"></script>
 
@@ -31,7 +31,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="ER Queue">
-    <link rel="apple-touch-icon" href="logo_ER.png">
+    <link rel="apple-touch-icon" href="logo_ER.jpg">
 
     <style>
         body {
@@ -188,6 +188,11 @@
                         <datalist id="staffOptions"></datalist>
                     </div>
                 </div>
+                <a href="admin.html" title="สำหรับผู้ดูแลระบบ (Admin)"
+                    class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl border border-slate-300 text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-user-shield"></i>
+                    <span class="hidden sm:inline">Admin</span>
+                </a>
             </div>
         </header>
 
@@ -618,6 +623,46 @@
             'female-vent': 1
         };
 
+        // แปลงวันที่เป็นรูปแบบย่อ พ.ศ. เช่น "18/11/69"
+        function formatShortThaiDate(input) {
+            if (!input) {
+                const now = new Date();
+                const d = String(now.getDate()).padStart(2, '0');
+                const m = String(now.getMonth() + 1).padStart(2, '0');
+                const y = String((now.getFullYear() + 543) % 100).padStart(2, '0');
+                return `${d}/${m}/${y}`;
+            }
+            const str = String(input).trim();
+            if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+                const dt = str.length === 10 ? new Date(`${str}T00:00:00`) : new Date(str);
+                if (!isNaN(dt.getTime())) {
+                    const d = String(dt.getDate()).padStart(2, '0');
+                    const m = String(dt.getMonth() + 1).padStart(2, '0');
+                    const y = String((dt.getFullYear() + 543) % 100).padStart(2, '0');
+                    return `${d}/${m}/${y}`;
+                }
+            }
+            const parts = str.split('/');
+            if (parts.length === 3) {
+                const d = parts[0].padStart(2, '0');
+                const m = parts[1].padStart(2, '0');
+                let yr = parseInt(parts[2], 10);
+                if (yr < 2500 && yr > 100) yr += 543;
+                const y = String(yr % 100).padStart(2, '0');
+                return `${d}/${m}/${y}`;
+            }
+            return str;
+        }
+
+        // คืนค่าป้ายเวร + วันที่ย่อ เช่น "เช้า 18/11/69"
+        function getCurrentShiftAndDateLabel(dateObj = new Date()) {
+            const mins = dateObj.getHours() * 60 + dateObj.getMinutes();
+            let shift = 'ดึก';
+            if (mins >= 510 && mins < 990) shift = 'เช้า';       // 08:30 - 16:29
+            else if (mins >= 990 || mins < 30) shift = 'บ่าย';   // 16:30 - 00:29
+            return `${shift} ${formatShortThaiDate(dateObj.toISOString())}`;
+        }
+
         let wardDetailedLimits = JSON.parse(localStorage.getItem('er_ward_detailed_limits')) || {
             'male': {
                 'อช.1': { max: 0, occupied: 0, available: 0, updatedAt: null },
@@ -679,6 +724,46 @@
             });
         }
 
+        // ตรวจสอบแยกหมวด: หากหมวดไหนกาเต็มครบทุกช่องในรอบปัจจุบัน ให้ขยับขึ้นรอบใหม่ทันที
+        function autoAdvanceFullSections() {
+            const sections = [
+                { key: 'male-normal', total: normalPattern.length },   // 80 ช่อง
+                { key: 'male-vent', total: ventPattern.length },       // 48 ช่อง
+                { key: 'female-normal', total: normalPattern.length }, // 80 ช่อง
+                { key: 'female-vent', total: ventPattern.length }      // 48 ช่อง
+            ];
+
+            let hasChanged = false;
+
+            sections.forEach(sec => {
+                let checkCycle = sectionCycles[sec.key] || 1;
+
+                while (true) {
+                    let filledCount = 0;
+                    for (let i = 0; i < sec.total; i++) {
+                        const slotId = `${sec.key}-${i}-c${checkCycle}`;
+                        // นับทั้งคิวจริงและช่อง SKIPPED ที่อยู่ใน boardRecords
+                        if (boardRecords[slotId]) {
+                            filledCount++;
+                        }
+                    }
+
+                    if (filledCount >= sec.total) {
+                        checkCycle++;
+                        hasChanged = true;
+                    } else {
+                        break;
+                    }
+                }
+
+                sectionCycles[sec.key] = checkCycle;
+            });
+
+            if (hasChanged) {
+                localStorage.setItem('er_section_cycles', JSON.stringify(sectionCycles));
+            }
+        }
+
         function getWardUsage(sectionKey) {
             const curCycle = sectionCycles[sectionKey] || 1;
             const gender = sectionKey.startsWith('male') ? 'male' : 'female';
@@ -690,7 +775,8 @@
 
             for (let key in boardRecords) {
                 const item = boardRecords[key];
-                if (item && item.section === sectionKey && Number(item.cycle) === Number(curCycle)) {
+                // เพิ่มเงื่อนไข item.masked_hn !== 'SKIPPED' เพื่อไม่ให้นับช่องที่ข้ามมาตัดโควตาเตียง
+                if (item && item.masked_hn !== 'SKIPPED' && item.section === sectionKey && Number(item.cycle) === Number(curCycle)) {
                     let targetWard = item.ward;
                     if (!targetWard && item.slot_id) {
                         const parts = item.slot_id.split('-');
@@ -867,6 +953,36 @@
             const nowIso = new Date().toISOString();
             const itemsToSave = [];
 
+            // 📌 1. ถ้าเป็นการกด "เริ่มเวรใหม่" ให้ล็อกช่องที่เต็มและถูกข้ามมาแล้วในเวรเก่าลง Google Sheets
+            if (isNewShift) {
+                const shiftDateLabel = getCurrentShiftAndDateLabel();
+                const ventSections = ['male-vent', 'female-vent'];
+
+                for (const secKey of ventSections) {
+                    const curCycle = sectionCycles[secKey] || 1;
+                    const prefix = secKey.startsWith('male') ? 'อช' : 'อญ';
+
+                    // หาตำแหน่งคิวล่าสุด (ไม่นับช่อง SKIPPED)
+                    let maxFilledIndex = -1;
+                    ventPattern.forEach((_, idx) => {
+                        const rec = boardRecords[`${secKey}-${idx}-c${curCycle}`];
+                        if (rec && rec.masked_hn !== 'SKIPPED') {
+                            maxFilledIndex = idx;
+                        }
+                    });
+
+                    // ไล่เช็กช่องว่างก่อนหน้าคิวล่าสุด: ถ้าเต็มอยู่ -> บันทึก SKIPPED ลงชีต
+                    for (let idx = 0; idx < maxFilledIndex; idx++) {
+                        const slotId = `${secKey}-${idx}-c${curCycle}`;
+                        const wardName = `${prefix}.${ventPattern[idx]}`;
+                        if (!boardRecords[slotId] && isWardVentFull(secKey, wardName)) {
+                            await recordSkippedSlotToSheet(slotId, secKey, curCycle, wardName, shiftDateLabel);
+                        }
+                    }
+                }
+            }
+
+            // 📌 2. บันทึกโควตาใหม่ของเวรถัดไปตามเดิม
             ['male', 'female'].forEach(gender => {
                 const prefix = gender === 'male' ? 'อช' : 'อญ';
                 for (let idx = 1; idx <= 3; idx++) {
@@ -898,10 +1014,11 @@
 
             localStorage.setItem('er_ward_detailed_limits', JSON.stringify(wardDetailedLimits));
             renderQuotaBars();
+            renderAllGrids();
             closeQuotaModal();
 
             if (isNewShift) {
-                alert("✅ บันทึกเริ่มเวรใหม่เรียบร้อย (ระบบล็อกคิวเก่าทั้งหมด)");
+                alert("✅ บันทึกเริ่มเวรใหม่เรียบร้อย (ระบบล็อกคิวเก่าและช่องที่ข้ามทั้งหมด)");
             } else {
                 alert("✅ อัปเดตยอดระหว่างเวรเรียบร้อย");
             }
@@ -980,7 +1097,8 @@
 
             for (let key in boardRecords) {
                 const r = boardRecords[key];
-                if (r && r.section && Number(r.cycle) === Number(sectionCycles[r.section])) {
+                // เพิ่มเงื่อนไข r.masked_hn !== 'SKIPPED' เพื่อไม่ให้นับช่องที่ข้ามรวมเป็นจำนวนรายผู้ป่วย
+                if (r && r.masked_hn !== 'SKIPPED' && r.section && Number(r.cycle) === Number(sectionCycles[r.section])) {
                     stats[r.section]++;
                 }
             }
@@ -1004,53 +1122,65 @@
             container.innerHTML = '';
             const currentSectionCycle = sectionCycles[sectionKey];
             const prefix = sectionKey.startsWith('male') ? 'อช' : 'อญ';
+            const currentShiftDateLabel = getCurrentShiftAndDateLabel();
 
             pattern.forEach((num, index) => {
                 const slotId = `${sectionKey}-${index}-c${currentSectionCycle}`;
                 const item = boardRecords[slotId];
-                const isCrossed = !!item;
                 const wardName = `${prefix}.${num}`;
 
                 const box = document.createElement('div');
-                let baseStyle = "h-11 sm:h-12 border border-slate-300 rounded-lg flex flex-col items-center justify-center transition select-none relative overflow-hidden ";
+                let baseStyle = "h-12 sm:h-14 border border-slate-300 rounded-lg flex flex-col items-center justify-center transition select-none relative overflow-hidden px-0.5 ";
 
-                if (isCrossed) {
-                    // 🔒 ช่องที่มีการกาคิวแล้ว
+                // 🛑 กรณีที่ 1: ช่องนี้ถูกบันทึกใน Google Sheets ว่าเป็น "SKIPPED" (ล็อกถาวรซิงก์ทุกเครื่อง)
+                if (item && item.masked_hn === 'SKIPPED') {
+                    const shiftDateText = item.booked_by || currentShiftDateLabel;
+                    const [sName = '', sDate = ''] = shiftDateText.split(' ');
+                    box.className = baseStyle + "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-85";
+                    box.innerHTML = `
+                <span class="text-xs font-bold line-through leading-none">${num}</span>
+                <span class="text-[7px] text-slate-500 font-semibold leading-none mt-0.5">เต็มเวร${sName}</span>
+                ${sDate ? `<span class="text-[6.5px] text-slate-400 leading-none mt-0.5">${sDate}</span>` : ''}
+            `;
+                    box.title = `ช่อง ${wardName} ถูกข้ามถาวรเนื่องจากเต็มเวร${shiftDateText}`;
+
+                } else if (item) {
+                    // 🔒 กรณีที่ 2: ช่องที่มีการกาคิวจริงแล้ว
                     const isLocked = isQueueLockedByShift(item);
                     let crossClass = isLocked ? 'crossed-box-locked' : (isVent ? 'crossed-box-vent' : 'crossed-box');
-
                     box.className = baseStyle + crossClass + " cursor-pointer";
 
                     const textBadgeColor = isLocked
                         ? 'text-slate-600 bg-slate-200/90'
                         : (isVent ? 'text-rose-700 bg-white/90' : 'text-blue-700 bg-white/90');
+                    const shortDate = formatShortThaiDate(item.date_th || item.created || item.created_at);
 
                     box.innerHTML = `
-                <span class="text-[10px] font-black ${textBadgeColor} z-10 px-1 rounded shadow-sm flex items-center gap-0.5">
-                    ${isLocked ? '<i class="fa-solid fa-lock text-[8px] text-slate-500"></i>' : ''}
+                <span class="text-[10px] font-black ${textBadgeColor} z-10 px-1 rounded shadow-sm flex items-center gap-0.5 leading-tight">
+                    ${isLocked ? '<i class="fa-solid fa-lock text-[7px] text-slate-500"></i>' : ''}
                     ${item.masked_hn}
                 </span>
-                <span class="text-[8px] ${isLocked ? 'text-slate-400' : 'text-slate-500'} font-bold z-10 bg-white/80 px-1 rounded">${item.time}</span>
+                <span class="text-[8px] ${isLocked ? 'text-slate-500' : 'text-slate-700'} font-bold z-10 bg-white/85 px-1 rounded leading-tight mt-0.5">${item.time || ''}</span>
+                <span class="text-[7px] ${isLocked ? 'text-slate-400' : 'text-slate-500'} font-semibold z-10 bg-white/80 px-1 rounded leading-none mt-0.5">${shortDate}</span>
             `;
                     box.onclick = () => openDetail(slotId, labelPrefix, num, item, wardName);
 
                 } else {
-                    // ⬜ ช่องว่าง: ตรวจสอบว่าวอร์ด Vent นี้เต็มหรือยัง
+                    // ⬜ กรณีที่ 3: ช่องว่าง (ยังไม่มีข้อมูลในชีต)
                     const isWardFull = isVent && isWardVentFull(sectionKey, wardName);
 
                     if (isWardFull) {
-                        // 🛑 กรณีวอร์ดเต็ม: คลุมสีเทา + ไม่ให้คลิกกา
+                        // วอร์ดเต็มในเวรนี้ (ระหว่างเวรปัจจุบัน)
+                        const [sName, sDate] = currentShiftDateLabel.split(' ');
                         box.className = baseStyle + "slot-ward-full";
                         box.innerHTML = `
-                    <span class="text-xs sm:text-sm font-bold">${num}</span>
-                    <span class="text-[8px] font-bold text-rose-500 leading-none">เต็ม</span>
+                    <span class="text-xs sm:text-sm font-bold leading-none">${num}</span>
+                    <span class="text-[7px] font-bold text-rose-600 leading-none mt-0.5">เต็มเวร${sName}</span>
+                    <span class="text-[6.5px] font-semibold text-rose-500 leading-none mt-0.5">${sDate}</span>
                 `;
-                        box.title = `วอร์ด ${wardName} โควตา Vent เต็มแล้ว`;
-                        box.onclick = () => {
-                            alert(`⚠️ วอร์ด ${wardName} โควตาเครื่องช่วยหายใจเต็มแล้วในเวรนี้\nหากต้องการกาเพิ่ม กรุณาให้ Incharge ไปปรับยอดใน "ตั้งลิมิต Vent ประจำเวร"`);
-                        };
+                        box.onclick = () => alert(`⚠️ วอร์ด ${wardName} โควตาเครื่องช่วยหายใจเต็มแล้วในเวร${currentShiftDateLabel}`);
                     } else {
-                        // 🟢 กรณีว่างปกติ: สีกระดานขาวพร้อมให้กดกา
+                        // 🟢 ว่างปกติ
                         box.className = baseStyle + "bg-white hover:bg-blue-50 hover:border-blue-400 cursor-pointer";
                         box.innerHTML = `<span class="text-sm sm:text-base font-bold text-slate-500">${num}</span>`;
                         box.onclick = () => openBooking(slotId, sectionKey, currentSectionCycle, num, wardName, `${labelPrefix} (ช่องเลข ${num} - ${wardName}) [รอบ ${currentSectionCycle}]`);
@@ -1059,6 +1189,40 @@
 
                 container.appendChild(box);
             });
+        }
+
+        // ฟังก์ชันส่งแถว SKIPPED ขึ้น Google Sheets เพื่อซิงก์ข้ามทุกเครื่อง
+        async function recordSkippedSlotToSheet(slotId, sectionKey, cycleVal, wardName, shiftDateLabel) {
+            const now = new Date();
+            const skipRecord = {
+                id: 'skip-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+                slot_id: slotId,
+                section: sectionKey,
+                hn: 'SKIPPED',
+                masked_hn: 'SKIPPED',
+                cycle: cycleVal,
+                ward: wardName,
+                time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} น.`,
+                date_th: formatShortThaiDate(now.toISOString()),
+                booked_by: shiftDateLabel,
+                created: now.toISOString()
+            };
+
+            pendingQueues[slotId] = skipRecord;
+            boardRecords[slotId] = skipRecord;
+
+            try {
+                await fetch(GAS_API_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({
+                        action: 'create_queue',
+                        ...skipRecord
+                    })
+                });
+            } catch (err) {
+                console.error("Save Skipped Slot Error:", err);
+            }
         }
 
         // ตรวจสอบว่าคิวนี้บันทึกก่อนเวลาเริ่มเวรใหม่ล่าสุดหรือไม่ (ถ้าใช่ = ล็อก)
@@ -1390,6 +1554,7 @@
             allRecordsList.unshift(tempRecord);
 
             syncCycleDropdowns(allRecordsList);
+            autoAdvanceFullSections();
             renderAllGrids();
             renderDailySummaryTable();
             renderQuotaBars();
@@ -1585,10 +1750,9 @@
                         !pendingDeletes.has(String(r.id)) && !pendingDeletes.has(r.slot_id)
                     );
 
-                    allRecordsList = incomingQueues;
+                    // 1. เก็บข้อมูลทั้งหมด (รวมแถว SKIPPED) ลงใน boardRecords เพื่อวาดช่องบนกระดาน
                     boardRecords = {};
-
-                    allRecordsList.forEach(r => {
+                    incomingQueues.forEach(r => {
                         if (r.slot_id) {
                             boardRecords[r.slot_id] = r;
                             if (pendingQueues[r.slot_id]) {
@@ -1599,7 +1763,12 @@
 
                     for (let sId in pendingQueues) {
                         boardRecords[sId] = pendingQueues[sId];
-                        if (!allRecordsList.some(item => item.slot_id === sId)) {
+                    }
+
+                    // 2. เก็บเฉพาะ "เคสผู้ป่วยจริง" (ตัด SKIPPED ออก) ลงใน allRecordsList เพื่อใช้ในตารางสรุปและตัวนับราย
+                    allRecordsList = incomingQueues.filter(r => r.masked_hn !== 'SKIPPED');
+                    for (let sId in pendingQueues) {
+                        if (pendingQueues[sId].masked_hn !== 'SKIPPED' && !allRecordsList.some(item => item.slot_id === sId)) {
                             allRecordsList.unshift(pendingQueues[sId]);
                         }
                     }
@@ -1618,7 +1787,8 @@
                         localStorage.setItem('er_ward_detailed_limits', JSON.stringify(wardDetailedLimits));
                     }
 
-                    syncCycleDropdowns(allRecordsList);
+                    syncCycleDropdowns(incomingQueues);
+                    autoAdvanceFullSections();
                     renderAllGrids();
                     renderDailySummaryTable();
                     renderQuotaBars();
