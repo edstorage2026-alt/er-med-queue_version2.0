@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Que Admission MED</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Prompt:wght@600;700;800&family=Sarabun:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="logo_ER.ico">
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+        }
+
+        .heading {
+            font-family: 'Prompt', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 text-slate-800 min-h-screen flex items-center justify-center p-4">
+
+    <!-- หน้าจอล็อกรหัสผ่าน (PIN Gate) -->
+    <div id="loginBox" class="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl text-center space-y-5">
+        <div
+            class="w-16 h-16 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-inner">
+            <i class="fa-solid fa-user-shield"></i>
+        </div>
+        <div>
+            <h1 class="text-xl font-black heading text-slate-900">ER Admin Console</h1>
+            <p class="text-xs text-slate-500 mt-1">สำหรับหัวหน้าเวร / ผู้ดูแลระบบ (แก้ไข-ลบข้อมูลที่ถูกล็อก)</p>
+        </div>
+        <form onsubmit="checkAdminPin(event)" class="space-y-3">
+            <input type="password" id="pinInput" placeholder="กรอกรหัสผ่าน Admin..." required autofocus
+                class="w-full text-center tracking-widest text-lg font-bold bg-slate-100 border border-slate-300 rounded-xl py-3 px-4 focus:ring-2 focus:ring-rose-500 outline-none">
+            <button type="submit"
+                class="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl shadow-lg transition">
+                เข้าสู่ระบบจัดการ
+            </button>
+        </form>
+        <a href="index.html" class="block text-xs text-slate-400 hover:text-slate-600 pt-2">← กลับหน้ากระดานหลัก</a>
+    </div>
+
+    <!-- หน้าจัดการหลักของ Admin (ซ่อนไว้จนกว่าจะใส่รหัสถูก) -->
+    <div id="adminDashboard"
+        class="hidden max-w-6xl w-full bg-slate-100 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-6 my-4">
+
+        <!-- Header -->
+        <header
+            class="bg-white rounded-2xl p-4 border border-slate-200 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-rose-600 text-white rounded-xl flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-screwdriver-wrench"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-black heading text-slate-900">ระบบจัดการข้อมูลผู้ดูแล (Admin Override)</h1>
+                    <p class="text-xs text-slate-500">สามารถแก้ไข HN, ผู้บันทึก และลบคิวข้ามเวรที่ถูกล็อกได้ทั้งหมด</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="loadAdminData()"
+                    class="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-bold border border-blue-200">
+                    <i class="fa-solid fa-rotate mr-1"></i> รีเฟรชข้อมูล
+                </button>
+                <a href="index.html"
+                    class="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold">
+                    กลับหน้าหลัก
+                </a>
+            </div>
+        </header>
+
+        <!-- แถบค้นหา & จัดการรายชื่อ Staff -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+            <!-- ฝั่งซ้าย (2 ส่วน): ตารางรายการคิวทั้งหมด (ปลดล็อกสิทธิ์แก้ไข/ลบ) -->
+            <div class="lg:col-span-2 bg-white rounded-2xl p-4 border border-slate-200 space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+                    <h2 class="font-black text-sm heading text-slate-800"><i
+                            class="fa-solid fa-list-check text-rose-600 mr-1.5"></i> รายการคิวทั้งหมด</h2>
+                    <input type="text" id="searchQueueInput" onkeyup="renderAdminTable()"
+                        placeholder="ค้นหา HN, วอร์ด, ผู้บันทึก..."
+                        class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-semibold outline-none w-56 focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div class="overflow-x-auto max-h-[520px] overflow-y-auto">
+                    <table class="w-full text-left text-xs text-slate-700">
+                        <thead class="bg-slate-100 text-slate-900 font-bold sticky top-0">
+                            <tr>
+                                <th class="py-2.5 px-3">วันที่ / เวลา</th>
+                                <th class="py-2.5 px-3">HN (เต็ม)</th>
+                                <th class="py-2.5 px-3">หมวด / วอร์ด</th>
+                                <th class="py-2.5 px-3">ผู้บันทึก</th>
+                                <th class="py-2.5 px-3 text-center">จัดการ (Admin)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminTableBody" class="divide-y divide-slate-100">
+                            <tr>
+                                <td colspan="5" class="text-center py-8 text-slate-400">กำลังโหลดข้อมูล...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ฝั่งขวา (1 ส่วน): จัดการรายชื่อพยาบาล (staff_list) -->
+            <div class="bg-white rounded-2xl p-4 border border-slate-200 space-y-3 flex flex-col justify-between">
+                <div class="space-y-3">
+                    <h2 class="font-black text-sm heading text-slate-800 border-b pb-3">
+                        <i class="fa-solid fa-user-nurse text-blue-600 mr-1.5"></i> จัดการรายชื่อผู้บันทึก (<span
+                            id="staffCount">0</span>)
+                    </h2>
+                    <form onsubmit="addStaffMember(event)" class="flex gap-1.5">
+                        <input type="text" id="newStaffInput" required placeholder="พิมพ์ชื่อ เช่น พว.สมหญิง..."
+                            class="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500">
+                        <button type="submit"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap">
+                            + เพิ่ม
+                        </button>
+                    </form>
+                    <div id="staffListContainer"
+                        class="divide-y divide-slate-100 max-h-[420px] overflow-y-auto border rounded-xl p-2 bg-slate-50/50">
+                        <!-- รายชื่อ Staff -->
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- MODAL แก้ไขคิว (Admin Edit) -->
+    <div id="editModal"
+        class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b pb-2">
+                <h3 class="font-black text-base heading text-slate-900">แก้ไขข้อมูลคิว (Admin)</h3>
+                <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+            <form onsubmit="submitEditQueue(event)" class="space-y-3 text-xs">
+                <input type="hidden" id="editRecordId">
+                <div>
+                    <label class="font-bold text-slate-700">หมายเลข HN (เต็ม)</label>
+                    <input type="text" id="editHnInput" required
+                        class="mt-1 w-full border border-slate-300 rounded-xl p-2.5 font-bold text-sm bg-slate-50">
+                </div>
+                <div>
+                    <label class="font-bold text-slate-700">ชื่อผู้บันทึก</label>
+                    <input type="text" id="editBookedByInput" required
+                        class="mt-1 w-full border border-slate-300 rounded-xl p-2.5 font-bold text-sm bg-slate-50">
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="closeEditModal()"
+                        class="w-1/2 py-2.5 rounded-xl border font-bold text-slate-600">ยกเลิก</button>
+                    <button type="submit"
+                        class="w-1/2 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold">บันทึกการแก้ไข</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxrvV21Lhug6hVzoJ0_6n1XJU3rgRqDIQEIjxJ6hJsglnjqMWEJ1AePU8x3-xYYgWeBTQ/exec';
+        const ADMIN_PIN = '1234'; // 👈 ตั้งรหัสผ่าน Admin ตรงนี้
+
+        let allQueues = [];
+        let allStaffs = [];
+
+        function maskHN(hn) {
+            if (!hn || hn.length < 4) return hn;
+            return `***${hn.slice(-3)}`;
+        }
+
+        function checkAdminPin(e) {
+            e.preventDefault();
+            const pin = document.getElementById('pinInput').value.trim();
+            if (pin === ADMIN_PIN) {
+                document.getElementById('loginBox').classList.add('hidden');
+                document.getElementById('adminDashboard').classList.remove('hidden');
+                loadAdminData();
+            } else {
+                alert('❌ รหัสผ่านไม่ถูกต้อง');
+                document.getElementById('pinInput').value = '';
+            }
+        }
+
+        async function loadAdminData() {
+            try {
+                const res = await fetch(`${GAS_API_URL}?action=get_all`);
+                const json = await res.json();
+                if (json.status === 'success') {
+                    // เรียงข้อมูลจากใหม่สุดไปเก่าสุด
+                    allQueues = (json.queues || []).sort((a, b) => {
+                        const tA = a.created ? new Date(a.created).getTime() : 0;
+                        const tB = b.created ? new Date(b.created).getTime() : 0;
+                        return tB - tA;
+                    });
+                    allStaffs = json.staffs || [];
+                    renderAdminTable();
+                    renderStaffManager();
+                }
+            } catch (err) {
+                alert('โหลดข้อมูลไม่สำเร็จ: ' + err);
+            }
+        }
+
+        function renderAdminTable() {
+            const tbody = document.getElementById('adminTableBody');
+            const keyword = document.getElementById('searchQueueInput').value.toLowerCase().trim();
+            tbody.innerHTML = '';
+
+            const filtered = allQueues.filter(r =>
+                String(r.hn).toLowerCase().includes(keyword) ||
+                String(r.ward).toLowerCase().includes(keyword) ||
+                String(r.booked_by).toLowerCase().includes(keyword) ||
+                String(r.date_th).toLowerCase().includes(keyword)
+            );
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-slate-400">ไม่พบรายการที่ค้นหา</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50';
+                tr.innerHTML = `
+                    <td class="py-2.5 px-3 whitespace-nowrap">
+                        <div class="font-bold text-slate-800">${row.date_th || '-'}</div>
+                        <div class="text-[11px] text-slate-500">${row.time || '-'}</div>
+                    </td>
+                    <td class="py-2.5 px-3 font-black text-blue-700 whitespace-nowrap">${row.hn}</td>
+                    <td class="py-2.5 px-3 whitespace-nowrap">
+                        <span class="font-bold text-slate-700">${row.section}</span>
+                        <span class="ml-1 bg-rose-100 text-rose-800 px-1.5 py-0.5 rounded font-bold">${row.ward || '-'}</span>
+                        <span class="text-[10px] text-slate-400 block">รอบที่ ${row.cycle || 1}</span>
+                    </td>
+                    <td class="py-2.5 px-3 font-semibold text-slate-700 whitespace-nowrap">${row.booked_by || '-'}</td>
+                    <td class="py-2.5 px-3 text-center whitespace-nowrap space-x-1">
+                        <button onclick="openEditModal('${row.id}', '${row.hn}', '${row.booked_by || ''}')" 
+                            class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg font-bold transition">
+                            <i class="fa-solid fa-pen"></i> แก้ไข
+                        </button>
+                        <button onclick="adminDeleteQueue('${row.id}', '${row.hn}')" 
+                            class="px-2.5 py-1 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded-lg font-bold transition">
+                            <i class="fa-solid fa-trash"></i> ลบ
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openEditModal(id, hn, bookedBy) {
+            document.getElementById('editRecordId').value = id;
+            document.getElementById('editHnInput').value = hn;
+            document.getElementById('editBookedByInput').value = bookedBy;
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+        }
+
+        async function submitEditQueue(e) {
+            e.preventDefault();
+            const id = document.getElementById('editRecordId').value;
+            const newHn = document.getElementById('editHnInput').value.trim();
+            const newBookedBy = document.getElementById('editBookedByInput').value.trim();
+
+            closeEditModal();
+
+            // อัปเดตบนหน้าจอทันที
+            const target = allQueues.find(q => String(q.id) === String(id));
+            if (target) {
+                target.hn = newHn;
+                target.masked_hn = maskHN(newHn);
+                target.booked_by = newBookedBy;
+            }
+            renderAdminTable();
+
+            await fetch(GAS_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({
+                    action: 'admin_update_queue',
+                    id: id,
+                    hn: newHn,
+                    masked_hn: maskHN(newHn),
+                    booked_by: newBookedBy
+                })
+            });
+        }
+
+        async function adminDeleteQueue(id, hn) {
+            if (!confirm(`⚠️ [สิทธิ์ Admin] ยืนยันลบคิว HN: ${hn} (รวมถึงคิวที่ถูกล็อกแล้ว) ใช่หรือไม่?`)) return;
+
+            allQueues = allQueues.filter(q => String(q.id) !== String(id));
+            renderAdminTable();
+
+            await fetch(GAS_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'delete_queue', id: id })
+            });
+        }
+
+        function renderStaffManager() {
+            const container = document.getElementById('staffListContainer');
+            document.getElementById('staffCount').textContent = allStaffs.length;
+            container.innerHTML = '';
+
+            allStaffs.forEach(name => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between py-1.5 px-2 text-xs hover:bg-white rounded-lg';
+                div.innerHTML = `
+                    <span class="font-semibold text-slate-700">${name}</span>
+                    <button onclick="deleteStaffMember('${name}')" class="text-rose-500 hover:text-rose-700 px-1.5 py-0.5 rounded">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        async function addStaffMember(e) {
+            e.preventDefault();
+            const input = document.getElementById('newStaffInput');
+            const name = input.value.trim();
+            if (!name) return;
+
+            allStaffs.push(name);
+            input.value = '';
+            renderStaffManager();
+
+            await fetch(GAS_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'admin_manage_staff', sub_action: 'add', name: name })
+            });
+        }
+
+        async function deleteStaffMember(name) {
+            if (!confirm(`ลบรายชื่อ "${name}" ออกจากระบบใช่หรือไม่?`)) return;
+
+            allStaffs = allStaffs.filter(n => n !== name);
+            renderStaffManager();
+
+            await fetch(GAS_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'admin_manage_staff', sub_action: 'delete', name: name })
+            });
+        }
+    </script>
+</body>
+
+</html>
